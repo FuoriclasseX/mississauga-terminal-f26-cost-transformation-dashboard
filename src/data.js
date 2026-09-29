@@ -48,6 +48,7 @@ export const DEFAULT_DATA = {
       { name: 'N95 masks made readily available on the dock during roofing', status: 'Completed', note: 'Supply in place' },
       { name: 'New shunt pre-trip checklist rolled out — used every shift', status: 'Completed', note: 'Now part of every shift' },
       { name: 'Freight-handling equipment — panel trucks and reconfigurable racks for windows, panels and car parts', status: 'Planned', note: 'Options: Sawtrax, Rack and Shelf, Grainger vertical panel truck (1,800 lb), Uline carpeted panel truck 30×60 — safer handling, better load quality, fewer damages' },
+      { name: 'Load securement & decking — ANCRA knock-down pallet decks and security divider deck-board kits', status: 'Planned', note: 'Second tier over short/fragile freight, loads locked in place — no freight falling when doors open (see Productivity)' },
       { name: 'Tailgates + safety moments after every incident (e.g. pinch points)', status: 'Active' },
       { name: 'Forklift pre/post-shift inspections by every operator', status: 'Active' },
       { name: 'No loading forklifts on straight trucks', status: 'Active' },
@@ -473,6 +474,31 @@ export const DEFAULT_DATA = {
     ],
     monctonNoCube: 1771,     // Moncton lane bills with no cube, Jul–Sep (627 + 600 + 544)
     toyotaNote: 'Toyota loads our trailer at Bowmanville; we fill the rest in Mississauga before the linehaul departs. Toyota footage is not being captured correctly — being fixed now.',
+  },
+
+  // --------------------------------------------------------------------------
+  // LOAD QUALITY & SECUREMENT — planned equipment, with trailer photos
+  // --------------------------------------------------------------------------
+  loadQuality: {
+    good: [
+      { img: '/img/load-decked-570260.jpg', caption: 'Trailer 570260 — deck beam builds a second tier over palletized freight' },
+      { img: '/img/load-deckboard-470275.jpg', caption: 'Trailer 470275 — deck board overhead, strap securing the load' },
+    ],
+    poor: [
+      { img: '/img/load-loose-470236.jpg', caption: 'Trailer 470236 — freight loose and stacked on a diagonal: damage risk, wasted cube' },
+      { img: '/img/load-floor-only-570419.jpg', caption: 'Trailer 570419 — floor-loaded only, upper half of the trailer empty' },
+    ],
+    equipment: [
+      'ANCRA knock-down pallet decks (intermodal) — second tier over short or fragile freight',
+      'ANCRA security divider deck-board kits (E-track) — lock loads in place, stop shifting',
+      'Panel trucks and reconfigurable racks (Sawtrax, Rack and Shelf, Grainger, Uline) — long, flat and awkward freight: windows, doors, panels, car parts',
+      'Load bars and straps on every mixed load',
+    ],
+    benefits: [
+      'Uses the top half of the trailer — lifts load factor (LF score 36.4% F27)',
+      'Less shifting and crushing — fewer damaged freight bills (1.61% 7-day avg) and claims',
+      'Safer unloading — no freight falling when doors open',
+    ],
   },
 
   // --------------------------------------------------------------------------

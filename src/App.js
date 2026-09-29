@@ -1900,6 +1900,25 @@ const ProductivityTab = ({ d, x }) => {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <LoadFactorCard lf={lf} />
+        <Card title="Load quality & securement" subtitle="Planned — decking and securement equipment" icon={Package}>
+          <div className="grid grid-cols-2 gap-3">
+            {[...d.loadQuality.good.map((g) => ({ ...g, ok: true })), ...d.loadQuality.poor.map((g) => ({ ...g, ok: false }))].map((ph) => (
+              <figure key={ph.img} className="overflow-hidden rounded-lg border border-gray-200">
+                <div className="relative">
+                  <img src={ph.img} alt={ph.caption} className="h-44 w-full object-cover" loading="lazy" />
+                  <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold text-white ${ph.ok ? 'bg-green-600' : 'bg-red-600'}`}>
+                    {ph.ok ? 'Target' : 'Fix'}
+                  </span>
+                </div>
+                <figcaption className="p-2 text-xs text-gray-600">{ph.caption}</figcaption>
+              </figure>
+            ))}
+          </div>
+          <p className="mb-1 mt-4 text-sm font-semibold text-gray-700">Equipment</p>
+          <Bullets items={d.loadQuality.equipment} icon={ChevronRight} color="text-purple-600" />
+          <p className="mb-1 mt-4 text-sm font-semibold text-gray-700">Why</p>
+          <Bullets items={d.loadQuality.benefits} />
+        </Card>
         <Card title="CICO — hours saved" subtitle="Clock-in / clock-out controls" icon={Clock}>
           {cicoData.length ? (
             <ResponsiveContainer width="100%" height={200}>
