@@ -1609,6 +1609,7 @@ const QaTab = ({ d, x }) => {
     },
   ];
   qa.sort((a, b) => (QA_ORDER.indexOf(a.q) + 1 || 99) - (QA_ORDER.indexOf(b.q) + 1 || 99));
+  const [openQ, setOpenQ] = useState(() => qa.slice(0, 2).map((it) => it.q));
 
   return (
     <>
@@ -1616,23 +1617,43 @@ const QaTab = ({ d, x }) => {
         eyebrow="Backup"
         icon={ClipboardCheck}
         title="Q&A — likely questions"
-        subtitle="Answers pulled from the same numbers as the dashboard. Click a question to open it."
+        subtitle="Answers pulled from the same numbers as the dashboard. Click a question to show or hide its answer."
       />
+      <div className="mb-4 flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={() => setOpenQ(qa.map((it) => it.q))} className="rounded-lg border border-purple-200 bg-white px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-50">Show all answers</button>
+        <button type="button" onClick={() => setOpenQ([])} className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Hide all answers</button>
+      </div>
       <div className="space-y-3">
-        {qa.map((item, i) => (
-          <details key={item.q} open={i < 2} className="rounded-xl bg-white shadow-lg">
-            <summary className="cursor-pointer select-none px-6 py-4 text-lg font-semibold text-gray-800">{item.q}</summary>
-            <ul className="space-y-2 px-6 pb-5">
-              {item.a.map((line, j) => (
-                <li key={j} className="flex gap-3 text-gray-700">
-                  <ChevronRight className="mt-0.5 h-5 w-5 flex-shrink-0 text-purple-600" />
-                  <span>{line}</span>
-                </li>
-              ))}
-              {item.calc && <li className="pl-8 text-xs italic text-gray-500">Some figures calculated from the SCA and productivity reports.</li>}
-            </ul>
-          </details>
-        ))}
+        {qa.map((item) => {
+          const isOpen = openQ.includes(item.q);
+          return (
+            <div key={item.q} className="rounded-xl bg-white shadow-lg">
+              <button
+                type="button"
+                onClick={() => setOpenQ((prev) => (prev.includes(item.q) ? prev.filter((q) => q !== item.q) : [...prev, item.q]))}
+                className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left text-lg font-semibold text-gray-800"
+                aria-expanded={isOpen}
+              >
+                <span>{item.q}</span>
+                <span className="flex flex-shrink-0 items-center gap-1 text-sm font-medium text-purple-700">
+                  {isOpen ? 'Hide' : 'Show'}
+                  <ChevronRight className={`h-5 w-5 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                </span>
+              </button>
+              {isOpen && (
+                <ul className="space-y-2 px-6 pb-5">
+                  {item.a.map((line, j) => (
+                    <li key={j} className="flex gap-3 text-gray-700">
+                      <ChevronRight className="mt-0.5 h-5 w-5 flex-shrink-0 text-purple-600" />
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                  {item.calc && <li className="pl-8 text-xs italic text-gray-500">Some figures calculated from the SCA and productivity reports.</li>}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </div>
     </>
   );
