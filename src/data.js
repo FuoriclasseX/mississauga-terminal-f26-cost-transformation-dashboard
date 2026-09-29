@@ -389,15 +389,38 @@ export const DEFAULT_DATA = {
   // --------------------------------------------------------------------------
   // LOAD FACTOR — weekly (September)
   // --------------------------------------------------------------------------
+  // Load factor report — Mississauga outbound, F27 (ready date: all)
+  // LF score = % of loads with LF > 80% · Load % = average load percentage
   loadFactor: {
-    lfTarget: 80,
-    loadTarget: 98,
-    weeks: [
-      { label: 'Wk 1 · Sep 1–5',   lfScore: null, loadPct: null },
-      { label: 'Wk 2 · Sep 6–12',  lfScore: null, loadPct: null },
-      { label: 'Wk 3 · Sep 13–19', lfScore: null, loadPct: null },
-      { label: 'Wk 4 · Sep 20–26', lfScore: null, loadPct: null },
+    lfTarget: null,          // no target provided
+    loadTarget: null,
+    months: [
+      { label: 'Jul', loads: 316, lfScore: 38.9, loadPct: 79.6, over80: 123 },
+      { label: 'Aug', loads: 293, lfScore: 33.4, loadPct: 71.5, over80: 98 },
+      { label: 'Sep', loads: 245, lfScore: 36.7, loadPct: 72.8, over80: 90 },
     ],
+    total: { loads: 854, lfScore: 36.4, loadPct: 74.9, over80: 311, over100: 100, bills: 55862, billsNoCube: 3166 },
+    buckets: [
+      { label: '≤60%', loads: 237 },
+      { label: '61–79%', loads: 306 },
+      { label: '80–90%', loads: 150 },
+      { label: '≥91%', loads: 161 },
+    ],
+    // LF score / load % by lane: [Jul, Aug, Sep]
+    lanes: [
+      { lane: 'Burnaby', lf: [69.6, 81.8, 89.5], load: [91.4, 93.8, 95.6] },
+      { lane: 'Winnipeg', lf: [61.3, 57.7, 76.5], load: [94.7, 103.0, 86.6] },
+      { lane: 'Calgary', lf: [59.1, 57.9, 54.5], load: [83.4, 94.9, 82.1] },
+      { lane: 'Edmonton', lf: [47.4, 46.7, 35.7], load: [81.1, 77.5, 80.9] },
+      { lane: 'Montreal', lf: [47.8, 42.9, 34.5], load: [77.3, 71.3, 72.7] },
+      { lane: 'Woodstock', lf: [42.6, 34.0, 17.9], load: [89.4, 76.6, 62.7] },
+      { lane: 'Ottawa', lf: [22.2, 29.4, 37.5], load: [69.3, 70.8, 76.7] },
+      { lane: 'Moncton', lf: [26.2, 13.6, 33.3], load: [81.3, 54.7, 79.2] },
+      { lane: 'Dartmouth', lf: [7.1, 14.3, 8.3], load: [67.3, 69.1, 63.5] },
+      { lane: 'Quebec City', lf: [12.5, 0.0, 0.0], load: [60.6, 45.1, 42.4] },
+      { lane: 'Windsor', lf: [6.7, 0.0, 0.0], load: [38.5, 36.6, 33.5] },
+    ],
+    monctonNoCube: 1771,     // Moncton lane bills with no cube, Jul–Sep (627 + 600 + 544)
   },
 
   // --------------------------------------------------------------------------
@@ -582,11 +605,14 @@ export const EDIT_SECTIONS = [
   },
   {
     title: 'Load Factor',
-    fields: DEFAULT_DATA.loadFactor.weeks.flatMap((w, i) => [
-      f(`loadFactor.weeks.${i}.label`, `Week ${i + 1} label`, 'text'),
-      f(`loadFactor.weeks.${i}.lfScore`, `Week ${i + 1} LF score %`),
-      f(`loadFactor.weeks.${i}.loadPct`, `Week ${i + 1} load %`),
-    ]),
+    fields: [
+      f('loadFactor.months.0.lfScore', 'Jul LF score %'),
+      f('loadFactor.months.0.loadPct', 'Jul load %'),
+      f('loadFactor.months.1.lfScore', 'Aug LF score %'),
+      f('loadFactor.months.1.loadPct', 'Aug load %'),
+      f('loadFactor.months.2.lfScore', 'Sep LF score %'),
+      f('loadFactor.months.2.loadPct', 'Sep load %'),
+    ],
   },
   {
     title: 'CICO Hours Saved',

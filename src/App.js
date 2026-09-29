@@ -320,7 +320,7 @@ const OverviewTab = ({ d, x, go }) => {
     { id: 'safety', icon: Shield, title: 'Safety', text: 'Current TRIR, what we do every shift, and what we are adding in F27.' },
     { id: 'service', icon: Clock, title: 'Service', text: 'On-time service incl./excl. partner carriers, missed pickups and scanning.' },
     { id: 'sca', icon: DollarSign, title: 'SCA & Savings', text: 'Hours vs allowance, cost per PRO, labour cost and the F27 take-out plan.' },
-    { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, cost per hour, load factor and CICO.' },
+    { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, P&D measures, load factor and CICO.' },
     { id: 'terminal', icon: Wrench, title: 'Physical Terminal', text: 'Condition of the building and urgent repairs.' },
   ];
   return (
@@ -1319,7 +1319,6 @@ const ProductivityTab = ({ d, x }) => {
     { name: 'F26', value: p26.unitsPerHr, fill: '#9ca3af' },
     { name: 'F27', value: p27.unitsPerHr, fill: '#059669' },
   ].filter((r) => isNum(r.value));
-  const lfData = lf.weeks.filter((w) => isNum(w.lfScore) || isNum(w.loadPct));
   const cicoData = c.weeks.filter((w) => isNum(w.hoursSaved));
   const compareRows = [
     { label: 'Weight (lbs)', a: p27.weight, b: p26.weight, d: x.weightVsLy, fmt: num, good: 'up', note: 'F27 is MTD' },
@@ -1513,35 +1512,67 @@ const ProductivityTab = ({ d, x }) => {
       <PdCard p={d.pd} />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <Card title="Load factor — weekly" subtitle={`Targets: LF score ${lf.lfTarget}% · load ${lf.loadTarget}%`} icon={Truck}>
-          {lfData.length ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={lf.weeks} margin={{ top: 20, right: 20, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                <YAxis domain={[50, 100]} tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}%`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v)} />
-                <Legend />
-                <ReferenceLine y={lf.lfTarget} stroke="#7c3aed" strokeDasharray="5 5" />
-                <ReferenceLine y={lf.loadTarget} stroke="#059669" strokeDasharray="5 5" />
-                <Line type="monotone" dataKey="lfScore" name="LF score %" stroke="#7c3aed" strokeWidth={3} dot={{ r: 5 }} connectNulls />
-                <Line type="monotone" dataKey="loadPct" name="Load %" stroke="#059669" strokeWidth={3} dot={{ r: 5 }} connectNulls />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChart />
-          )}
-          <table className="mt-4 w-full text-sm">
-            <tbody>
-              {lf.weeks.map((w) => (
-                <tr key={w.label} className="border-b border-gray-100">
-                  <td className="py-2 text-gray-700">{w.label}</td>
-                  <td className="py-2 text-right">LF <span className="font-semibold"><V v={w.lfScore} fmt={(v) => pct(v)} small /></span></td>
-                  <td className="py-2 text-right">Load <span className="font-semibold"><V v={w.loadPct} fmt={(v) => pct(v)} small /></span></td>
+        <Card title="Load factor — outbound" subtitle="Load factor report · Mississauga · F27 Jul–Sep" icon={Truck}>
+          <div className="mb-4 grid grid-cols-3 gap-3">
+            <div className="rounded-lg bg-amber-50 p-3">
+              <p className="text-xs text-gray-500">LF score F27</p>
+              <p className="text-2xl font-bold text-amber-700"><V v={lf.total.lfScore} fmt={(v) => pct(v)} small /></p>
+              <p className="text-xs text-gray-500">loads over 80% full</p>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Avg load %</p>
+              <p className="text-2xl font-bold text-gray-900"><V v={lf.total.loadPct} fmt={(v) => pct(v)} small /></p>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Loads</p>
+              <p className="text-2xl font-bold text-gray-900"><V v={lf.total.loads} fmt={num} small /></p>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={lf.months} margin={{ top: 20, right: 10, bottom: 0, left: -15 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v)} />
+              <Legend />
+              <Bar dataKey="lfScore" name="LF score %" fill="#7c3aed" radius={[3, 3, 0, 0]}>
+                <LabelList dataKey="lfScore" position="top" style={{ fontSize: 10, fill: '#374151' }} />
+              </Bar>
+              <Bar dataKey="loadPct" name="Load %" fill="#06b6d4" radius={[3, 3, 0, 0]}>
+                <LabelList dataKey="loadPct" position="top" style={{ fontSize: 10, fill: '#374151' }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-200 text-left text-gray-500">
+                  <th className="py-1.5 pr-2 font-semibold">Lane (LF score)</th>
+                  <th className="py-1.5 pr-2 text-right font-semibold">Jul</th>
+                  <th className="py-1.5 pr-2 text-right font-semibold">Aug</th>
+                  <th className="py-1.5 text-right font-semibold">Sep</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {lf.lanes.map((l) => (
+                  <tr key={l.lane} className="border-b border-gray-100">
+                    <td className="py-1.5 pr-2 font-medium text-gray-700">{l.lane}</td>
+                    {l.lf.map((v, i) => (
+                      <td key={i} className={`py-1.5 pr-2 text-right font-semibold ${v >= 60 ? 'text-green-700' : v < 15 ? 'text-red-600' : 'text-gray-700'}`}>{pct(v)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+            <p className="font-semibold">Biggest open opportunity</p>
+            <p>
+              Western lanes are strong (Burnaby {pct(lf.lanes[0].lf[2])} in Sept). Windsor, Quebec City and Dartmouth run consistently light — consolidation / frequency review.
+              {isNum(lf.monctonNoCube) && isNum(lf.total.billsNoCube) && ` Moncton has ${num(lf.monctonNoCube)} of ${num(lf.total.billsNoCube)} bills with no cube (${pct((lf.monctonNoCube / lf.total.billsNoCube) * 100, 0)}) — fixing cube capture lifts that lane's measured LF.`}
+            </p>
+          </div>
+          <Source>LF score = share of loads over 80% full · Load % = average load percentage.</Source>
         </Card>
         <Card title="CICO — hours saved" subtitle="Clock-in / clock-out controls" icon={Clock}>
           {cicoData.length ? (
