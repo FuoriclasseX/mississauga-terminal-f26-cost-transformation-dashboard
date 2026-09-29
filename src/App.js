@@ -757,21 +757,31 @@ const ServiceTab = ({ d, x }) => {
             <Bullets items={o.actions} icon={ChevronRight} color="text-purple-600" />
           </div>
           <div>
-            <p className="mb-2 text-sm font-semibold text-gray-700">Lates by reason code</p>
-            {x.codesHaveData ? (
-              <div className="flex flex-wrap gap-2">
-                {x.codeRows.filter((r) => isNum(r.count)).map((r) => (
-                  <Chip key={r.code} tone={r.code === 'IN' || r.code === 'TB' ? 'gray' : 'purple'}>
-                    {r.code}: {num(r.count)}
-                  </Chip>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Late codes by reason (AS, BD, OT, TF, LH, DL, MS, IN, TB) to follow.
-              </p>
-            )}
-            <Source>IN = agent / beyond-carrier delays · TB = transborder delays — outside terminal control.</Source>
+            <p className="mb-2 text-sm font-semibold text-gray-700">Service failures by code — AS excluded (not a service fail)</p>
+            {o.weeks.map((w) => {
+              const fails = Object.entries(w.codes).filter(([k]) => k !== 'AS').sort((p, q) => q[1] - p[1]);
+              const total = sum(fails.map(([, v]) => v));
+              return (
+                <div key={w.label} className="mb-4">
+                  <p className="text-xs text-gray-600">
+                    <span className="font-semibold text-gray-800">{w.label}</span> ({w.note}) · {num(w.fbs)} FBs · adj {pct(w.adjPct, 2)} · {num(w.unadjLates)} unadj. lates − {num(w.codes.AS || 0)} AS ={' '}
+                    <span className="font-semibold text-gray-800">{num(total)} service fails</span>
+                  </p>
+                  <div className="mt-1 space-y-1">
+                    {fails.map(([k, v]) => (
+                      <div key={k} className="flex items-center gap-2 text-xs">
+                        <span className="w-16 font-semibold text-gray-700">{k}</span>
+                        <div className="h-3 flex-1 rounded bg-gray-100">
+                          <div className={`h-3 rounded ${k === fails[0][0] ? 'bg-red-400' : 'bg-purple-400'}`} style={{ width: `${(v / fails[0][1]) * 100}%` }} />
+                        </div>
+                        <span className="w-20 text-right text-gray-700">{v} · {pct((v / total) * 100, 0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            <Source>Source: Terminal OTS report, Mississauga. % = share of that week's service fails.</Source>
           </div>
         </div>
         <Source>

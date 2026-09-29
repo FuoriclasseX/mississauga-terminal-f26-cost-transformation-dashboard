@@ -118,7 +118,13 @@ export const DEFAULT_DATA = {
       { label: 'Sep 27', pct: 100.0 },
       { label: 'Sep 28', pct: 95.8 },
     ],
-    week40: { incl: 95.82, excl: 97.81 },
+    // Terminal OTS report — Mississauga weekly. Late codes are shares of unadjusted lates; AS is not a service fail.
+    weeks: [
+      { label: 'Week 39', note: 'full week', fbs: 3458, onTime: 2957, unadjLates: 501, adjLates: 180, unadjPct: 85.51, adjPct: 94.79,
+        codes: { AS: 435, TF: 22, UNCODED: 14, IN: 9, OTHER: 9, DL: 8, OT: 3, LH: 1 } },
+      { label: 'Week 40', note: 'Sun–Mon', fbs: 840, onTime: 750, unadjLates: 90, adjLates: 29, unadjPct: 89.29, adjPct: 96.55,
+        codes: { AS: 82, UNCODED: 3, OT: 2, IN: 2, OTHER: 1 } },
+    ],
     inclPartners: { pct: 87.6, lateFbs: 12650, onTimeFbs: 89340 },   // dashboard shows 12.65K / 89.34K
     exclPartners: { pct: 92.24, lateFbs: 6910, onTimeFbs: 82070 },   // dashboard shows 6.91K / 82.07K
     months: [
