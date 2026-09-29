@@ -325,7 +325,8 @@ const OverviewTab = ({ d, x, go }) => {
   const agenda = [
     { id: 'safety', icon: Shield, title: 'Safety', text: 'Current TRIR, what we do every shift, and what we are adding in F27.' },
     { id: 'service', icon: Clock, title: 'Service', text: 'On-time service incl./excl. partner carriers, missed pickups and scanning.' },
-    { id: 'sca', icon: DollarSign, title: 'SCA & Savings', text: 'Hours vs allowance, cost per PRO, labour cost and the F27 take-out plan.' },
+    { id: 'initiatives', icon: TrendingUp, title: 'F27 Savings Outlook', text: 'Monthly and yearly roll-up to Jun 2027 — Admin and Dock labour by %, next levers.' },
+    { id: 'sca', icon: DollarSign, title: 'SCA & Savings', text: 'Hours vs allowance, SCA dock cost per PRO, labour and agency mix.' },
     { id: 'spend', icon: BarChart3, title: 'Cost & Volume', text: 'Terminal cost Jul 2025 → Aug 2026 against PROs and weight; cost per PRO.' },
     { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, P&D measures, load factor and CICO.' },
     { id: 'terminal', icon: Wrench, title: 'Physical Terminal', text: 'Moving to a new building, expected before the end of 2026.' },
@@ -342,8 +343,8 @@ const OverviewTab = ({ d, x, go }) => {
           <span className="font-bold text-green-400">{isNum(x.wdPctUsed) ? `${pct(x.wdPctUsed)} of its SCA hour allowance` : 'under its SCA hour allowance'}</span>, cost per unit is{' '}
           <span className="font-bold text-green-400">{x.cpuVsLy ? `down ${pct(Math.abs(x.cpuVsLy.pct))} vs F26` : 'down vs F26'}</span>, units per hour are{' '}
           <span className="font-bold text-green-400">{x.uphVsLy ? `up ${pct(x.uphVsLy.pct)}` : 'up'}</span>, and overtime is only{' '}
-          <span className="font-bold text-yellow-300">{isNum(p27.otHours) ? `${num(p27.otHours)} hours` : 'minimal'}</span>. The focus for the rest of F27 is
-          closing the PPH gap to goal.
+          <span className="font-bold text-yellow-300">{isNum(p27.otHours) ? `${num(p27.otHours)} hours` : 'minimal'}</span>. Looking ahead: if current rates hold, F27 spend on the tracked lines comes in{' '}
+          <span className="font-bold text-yellow-300">≈{kMoney(outlookTotal(d) + sum(d.initiatives.map((i) => i.annual)))} below F26</span> (≈{kMoney((outlookTotal(d) + sum(d.initiatives.map((i) => i.annual))) / 12)} a month), including the confirmed $61K dispatcher saving. Next: closing the PPH gap and sizing the load-quality levers.
         </p>
         <div className="mt-6 max-w-xl">
           <div className="mb-1 flex justify-between text-sm opacity-80">
@@ -381,7 +382,7 @@ const OverviewTab = ({ d, x, go }) => {
           tone="green"
           label={`SCA · Hours vs allowance (${d.sca.period})`}
           value={<V v={x.wdPctUsed} fmt={(v) => pct(v)} />}
-          sub={<>Cost per PRO <V v={d.sca.costPerProMtd} fmt={(v) => money(v, 2)} small /> vs <V v={d.sca.costPerProTarget} fmt={(v) => money(v, 2)} small /> target</>}
+          sub={<>SCA dock cost per PRO <V v={d.sca.costPerProMtd} fmt={(v) => money(v, 2)} small /> vs <V v={d.sca.costPerProTarget} fmt={(v) => money(v, 2)} small /> target</>}
           footer={
             isNum(x.hoursUnder) && (
               <Chip tone={x.hoursUnder >= 0 ? 'green' : 'red'}>
@@ -1253,7 +1254,7 @@ const QaTab = ({ d, x }) => {
       a: [
         `${f(s.f27Hours, num)} hours used vs ${f(s.wdAllowable, num)} allowed month-to-date = ${f(x.wdPctUsed, (v) => pct(v))} of allowance — ${f(x.hoursUnder, num)} hours under (≈${f(x.hoursUnderValue, kMoney)}).`,
         `On pace for ≈${f(x.paceHours, num)} hours in September vs the ${f(s.scaTargetHours, num)} target — ${f(x.paceVsReductionTarget, (v) => pct(v, 0))} of the hour-reduction target.`,
-        `Cost per PRO ${f(s.costPerProMtd, (v) => money(v, 2))} vs ${f(s.costPerProTarget, (v) => money(v, 2))} = ${f(x.cppPctOfTarget, (v) => pct(v))} of target (amber watch band).`,
+        `SCA dock cost per PRO ${f(s.costPerProMtd, (v) => money(v, 2))} vs ${f(s.costPerProTarget, (v) => money(v, 2))} = ${f(x.cppPctOfTarget, (v) => pct(v))} of target (amber watch band).`,
       ],
     },
     {
@@ -1606,6 +1607,17 @@ const SpendTab = ({ d }) => {
       </Card>
     </>
   );
+};
+
+// F27 savings outlook total (P&L lines) — same method as the SavingsOutlook card
+const outlookTotal = (d) => {
+  const so = d.savingsOutlook;
+  const n = so.actualMonths;
+  return sum(so.lines.map((l) => {
+    const ly = sum(l.f26.slice(0, n));
+    const rate = ly ? (sum(l.f27) - ly) / ly : 0;
+    return sum(l.f26.map((v, i) => (i < n ? v - l.f27[i] : -rate * v)));
+  }));
 };
 
 const OUTLOOK_COLORS = { 'Admin labour': '#7c3aed', 'Dock labour': '#06b6d4', Other: '#f59e0b' };
