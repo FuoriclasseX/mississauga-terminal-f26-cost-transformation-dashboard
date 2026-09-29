@@ -7,7 +7,7 @@ import {
   Shield, Clock, DollarSign, Target, TrendingDown, TrendingUp, CheckCircle,
   AlertTriangle, Truck, Activity, BarChart3, Wrench, Gauge, Users, Pencil, X,
   Copy, RotateCcw, ChevronLeft, ChevronRight, Calendar, Package, EyeOff, Zap,
-  ClipboardCheck, Home, Award
+  ClipboardCheck, Home, Award, Download
 } from 'lucide-react';
 import { DEFAULT_DATA, EDIT_SECTIONS } from './data';
 import F26Recap from './F26Recap';
@@ -1985,6 +1985,13 @@ const App = () => {
               <button onClick={() => step(1)} className="hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 sm:block" aria-label="Next section">
                 <ChevronRight className="h-5 w-5" />
               </button>
+              <a
+                href="/Mississauga_F27_Leadership_Review.pptx"
+                download
+                className="hidden items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 md:flex"
+              >
+                <Download className="h-4 w-4" /> PowerPoint
+              </a>
               <button
                 onClick={() => setEditing(true)}
                 className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-purple-700"
