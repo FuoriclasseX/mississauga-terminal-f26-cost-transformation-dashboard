@@ -158,8 +158,6 @@ const derive = (d) => {
     ? d.safety.daysSinceLastRecordable
     : lastRec ? Math.floor((new Date() - lastRec) / 86400000) : null;
 
-  const repairs = d.terminal.repairs.filter((r) => r.item && String(r.item).trim());
-  const repairCost = sum(repairs.map((r) => r.estCost));
 
   const missing = EDIT_SECTIONS.flatMap((sec) => sec.fields)
     .filter((fl) => fl.type === 'number')
@@ -175,7 +173,7 @@ const derive = (d) => {
     hoursAtF26Rate, hoursAvoided, hoursAvoidedValue,
     cpu27, cpu26, cpuVsLy, cpuSavings, unitsVsLy,
     cicoHours, cicoHasHours, cicoValue, cicoAnnualized,
-    daysSinceRecordable, repairs, repairCost, missing,
+    daysSinceRecordable, missing,
   };
 };
 
@@ -326,7 +324,7 @@ const OverviewTab = ({ d, x, go }) => {
     { id: 'service', icon: Clock, title: 'Service', text: 'On-time service incl./excl. partner carriers, missed pickups and scanning.' },
     { id: 'sca', icon: DollarSign, title: 'SCA & Savings', text: 'Hours vs allowance, cost per PRO, labour cost and the F27 take-out plan.' },
     { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, P&D measures, load factor and CICO.' },
-    { id: 'terminal', icon: Wrench, title: 'Physical Terminal', text: 'Condition of the building and urgent repairs.' },
+    { id: 'terminal', icon: Wrench, title: 'Physical Terminal', text: 'Relocation to a new building planned before 2027.' },
   ];
   return (
     <>
@@ -402,6 +400,12 @@ const OverviewTab = ({ d, x, go }) => {
         <Card title="Where the F27 savings are showing up" icon={Award} className="lg:col-span-3">
           <div className="space-y-3">
             {[
+              {
+                show: isNum(d.initiatives[0] && d.initiatives[0].annual),
+                icon: Users,
+                title: `${d.initiatives[0] && isNum(d.initiatives[0].annual) ? money(d.initiatives[0].annual) : ''}/yr confirmed — ${d.initiatives[0] ? d.initiatives[0].name.split(' — ')[0].toLowerCase() : ''}`,
+                text: 'Dispatch is now centralized, so the dispatcher seat is no longer needed. More initiatives in development.',
+              },
               {
                 show: isNum(x.hoursUnder),
                 icon: Clock,
@@ -1200,13 +1204,8 @@ const ScaTab = ({ d, x }) => {
     { period: 'F27 Sept MTD', Company: s.f27CompanyCost, Agency: s.f27AgencyCost },
   ];
   const labourReady = allNum(s.f26CompanyCost, s.f26AgencyCost, s.f27CompanyCost, s.f27AgencyCost);
-  const shifts = [
-    { label: 'Days', v: s.shiftHours.days },
-    { label: 'Afternoons', v: s.shiftHours.afternoon },
-    { label: 'Midnights', v: s.shiftHours.midnight },
-  ];
   const coverage = x.initHasAnnual && isNum(s.f27SavingsTarget) && s.f27SavingsTarget > 0 ? (x.initAnnual / s.f27SavingsTarget) * 100 : null;
-  const statusTone = (st) => (/new/i.test(st) ? 'blue' : /sustain/i.test(st) ? 'green' : 'purple');
+  const statusTone = (st) => (/confirm|sustain/i.test(st) ? 'green' : /new/i.test(st) ? 'blue' : /develop/i.test(st) ? 'amber' : 'purple');
   const cppLabel = { green: 'On target', amber: 'Under target — watch', red: 'Over target', gray: '' }[x.cppTone];
   const periodNote = `F26 = full September 2025 · F27 = September MTD (${isNum(s.wdMtd) ? s.wdMtd : '—'} of ${isNum(s.wdMonth) ? s.wdMonth : '—'} working days)`;
 
@@ -1399,21 +1398,59 @@ const ScaTab = ({ d, x }) => {
             </div>
           )}
         </Card>
-        <Card title="Target dock hours per shift" subtitle="Shift start/end aligned to P&D activity" icon={Clock}>
-          <div className="grid grid-cols-3 gap-3">
-            {shifts.map((sh) => (
-              <div key={sh.label} className="rounded-lg bg-gray-50 p-3 text-center">
-                <p className="text-xs font-medium text-gray-500">{sh.label}</p>
-                <p className="mt-1 text-lg font-bold text-gray-900">
-                  {allNum(sh.v.low, sh.v.high) ? `${num(sh.v.low)}–${num(sh.v.high)}` : <Tbc small />}
-                </p>
-                <p className="text-xs text-gray-500">hrs / day</p>
+        <Card title="Workforce mix — agency vs D&R" subtitle="SCA hours report · dock hours" icon={Users}>
+          {(() => {
+            const mix = [
+              { label: 'F26 Sept', agency: s.f26AgencyHours, dr: s.f26CompanyHours },
+              { label: `F27 ${s.period}`, agency: s.f27AgencyHours, dr: s.f27CompanyHours },
+            ];
+            return (
+              <div className="space-y-3">
+                {mix.map((m) => {
+                  const ok = allNum(m.agency, m.dr) && m.agency + m.dr > 0;
+                  const share = ok ? (m.agency / (m.agency + m.dr)) * 100 : null;
+                  return (
+                    <div key={m.label}>
+                      <div className="flex justify-between text-xs text-gray-600">
+                        <span className="font-semibold">{m.label}</span>
+                        <span>{ok ? `${pct(share, 0)} agency · ${num(m.agency / m.dr, 2)} agency hrs per D&R hr` : 'TBC'}</span>
+                      </div>
+                      <div className="mt-1 flex h-3 overflow-hidden rounded-full bg-gray-100">
+                        {ok && <div className="bg-cyan-500" style={{ width: `${share}%` }} />}
+                        {ok && <div className="bg-purple-600" style={{ width: `${100 - share}%` }} />}
+                      </div>
+                    </div>
+                  );
+                })}
+                <p className="text-xs text-gray-500"><span className="text-cyan-600">■</span> Agency <span className="ml-2 text-purple-600">■</span> D&R · ratios calculated from the SCA hours report.</p>
               </div>
-            ))}
-          </div>
-          <p className="mt-4 text-sm text-gray-600">
-            Daily SCA target: <span className="font-semibold">{isNum(s.wdTargetPerDay) ? `${num(s.wdTargetPerDay)} hrs per working day` : 'TBC'}</span>
-          </p>
+            );
+          })()}
+          <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">Per shift — headcount (dock + admin)</p>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-gray-500">
+                <th className="py-1 pr-2 font-semibold">Shift</th>
+                <th className="py-1 pr-2 text-right font-semibold">D&R</th>
+                <th className="py-1 pr-2 text-right font-semibold">Agency</th>
+                <th className="py-1 text-right font-semibold">Agency : D&R</th>
+              </tr>
+            </thead>
+            <tbody>
+              {s.workforce.map((w) => {
+                const dr = allNum(w.drDock) ? w.drDock + (w.drAdmin || 0) : null;
+                const ag = allNum(w.agencyDock) ? w.agencyDock + (w.agencyAdmin || 0) : null;
+                return (
+                  <tr key={w.shift} className="border-b border-gray-100">
+                    <td className="py-1.5 pr-2 font-medium text-gray-700">{w.shift}</td>
+                    <td className="py-1.5 pr-2 text-right"><V v={dr} fmt={num} small /></td>
+                    <td className="py-1.5 pr-2 text-right"><V v={ag} fmt={num} small /></td>
+                    <td className="py-1.5 text-right font-semibold">{allNum(dr, ag) && dr > 0 ? `${num(ag / dr, 2)} : 1` : '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </Card>
         <Card title="How we are taking cost out" icon={Zap}>
           <Bullets items={s.actions} icon={ChevronRight} color="text-purple-600" />
@@ -1722,51 +1759,26 @@ const ProductivityTab = ({ d, x }) => {
 };
 
 // --- Terminal --------------------------------------------------------------
-const TerminalTab = ({ d, x }) => {
+const TerminalTab = ({ d }) => {
   const t = d.terminal;
-  const available = allNum(t.doorsTotal, t.doorsOutOfService) && t.doorsTotal > 0 ? ((t.doorsTotal - t.doorsOutOfService) / t.doorsTotal) * 100 : null;
-  const prTone = (p) => (/urgent/i.test(p) ? 'red' : /high/i.test(p) ? 'amber' : 'blue');
   return (
     <>
       <PageHeader
         eyebrow="5 · Physical Terminal"
         icon={Wrench}
         title="Status of the Physical Terminal"
-        subtitle="Review of the building and the urgent repairs required."
+        subtitle="Terminal relocation planned — no major repair spend at the current site."
       />
-      <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
-        <Kpi icon={Home} tone="gray" label="Dock doors" value={<V v={t.doorsTotal} fmt={num} />} />
-        <Kpi icon={AlertTriangle} tone="red" label="Doors out of service" value={<V v={t.doorsOutOfService} fmt={num} />} />
-        <Kpi icon={CheckCircle} tone="green" label="Door availability" value={<V v={available} fmt={(v) => pct(v)} />} />
-        <Kpi icon={DollarSign} tone="amber" label="Est. repair cost" value={x.repairs.some((r) => isNum(r.estCost)) ? money(x.repairCost) : <Tbc />} />
-      </div>
-      <Card title="Urgent repairs & capital needs" icon={Wrench}>
-        {x.repairs.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b-2 border-gray-200 text-left text-gray-500">
-                  <th className="py-2 pr-4 font-semibold">Item</th>
-                  <th className="py-2 pr-4 font-semibold">Priority</th>
-                  <th className="py-2 pr-4 text-right font-semibold">Est. cost</th>
-                  <th className="py-2 font-semibold">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {x.repairs.map((r, i) => (
-                  <tr key={i} className="border-b border-gray-100">
-                    <td className="py-3 pr-4 font-medium text-gray-800">{r.item}</td>
-                    <td className="py-3 pr-4"><Chip tone={prTone(r.priority || '')}>{r.priority || '—'}</Chip></td>
-                    <td className="py-3 pr-4 text-right"><V v={r.estCost} fmt={money} small /></td>
-                    <td className="py-3 text-gray-600">{r.status || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <Card title="Terminal relocation" icon={Home}>
+        <div className="flex items-start gap-4">
+          <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
+            <Truck className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="text-2xl font-bold text-gray-900"><V v={t.relocation} /></p>
+            <p className="mt-2 text-gray-600"><V v={t.relocationNote} /></p>
           </div>
-        ) : (
-          <EmptyChart height={220} label="Add urgent repairs (item, priority, estimated cost, status)" />
-        )}
+        </div>
       </Card>
     </>
   );

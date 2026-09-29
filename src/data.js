@@ -243,16 +243,16 @@ export const DEFAULT_DATA = {
     wdAllowable: 4390,           // working-day allowance MTD (report: 91.1% used)
     cdTargetPerDay: 171,
     cdAllowable: 4439,           // calendar-day allowance MTD (report: 90.1% used)
-    // Target dock hours per shift (per day) — aligned to P&D activity
-    shiftHours: {
-      days:      { low: null, high: null },
-      afternoon: { low: null, high: null },
-      midnight:  { low: null, high: null },
-    },
+    // Workforce mix per shift — headcount (dock + admin), agency vs D&R
+    workforce: [
+      { shift: 'Days', drDock: null, agencyDock: null, drAdmin: null, agencyAdmin: null },
+      { shift: 'Afternoons', drDock: null, agencyDock: null, drAdmin: null, agencyAdmin: null },
+      { shift: 'Midnights', drDock: null, agencyDock: null, drAdmin: null, agencyAdmin: null },
+    ],
     f27SavingsTarget: null,     // F27 cost take-out target ($)
     actions: [
       'Weekly SCA review meetings — hours vs allowance and cost per PRO tracked every week.',
-      'Shift start/end times aligned to P&D activity, with target dock-hour bands per shift.',
+      'Shift start/end times aligned to P&D activity; agency vs D&R mix managed per shift.',
       'Consolidating large-customer freight into fewer trailers.',
       'Demurrage and TL billing captured on every eligible shipment.',
       'Accessorial audit on freight bills (appointment, tailgate, storage, inside delivery) before invoicing.',
@@ -355,14 +355,8 @@ export const DEFAULT_DATA = {
   // annual = F27 full-year plan, ytd = realized Jul 1 – today
   // --------------------------------------------------------------------------
   initiatives: [
-    { name: 'Dock labour — shift hours aligned to P&D',     annual: null, ytd: null, status: 'In progress' },
-    { name: 'Agency / contract labour reduction',            annual: null, ytd: null, status: 'In progress' },
-    { name: 'CICO hours saved (late / lunch / early-off)',   annual: null, ytd: null, status: 'In progress' },
-    { name: 'Accessorial billing recovery',                  annual: null, ytd: null, status: 'New' },
-    { name: 'Load factor & trailer consolidation',           annual: null, ytd: null, status: 'New' },
-    { name: 'Shunting optimization',                         annual: null, ytd: null, status: 'Sustained from F26' },
-    { name: 'Forklift rentals returned',                     annual: null, ytd: null, status: 'Sustained from F26' },
-    { name: 'Cargo claims reduction',                        annual: null, ytd: null, status: 'Sustained from F26' },
+    { name: 'Dispatcher role eliminated — dispatch centralized', annual: 61000, ytd: null, status: 'Confirmed' },
+    { name: 'Additional initiatives in development', annual: null, ytd: null, status: 'In development' },
   ],
 
   // --------------------------------------------------------------------------
@@ -481,15 +475,8 @@ export const DEFAULT_DATA = {
   // Rows with an empty item are hidden.
   // --------------------------------------------------------------------------
   terminal: {
-    doorsTotal: null,
-    doorsOutOfService: null,
-    repairs: [
-      { item: '', priority: 'Urgent',  estCost: null, status: '' },
-      { item: '', priority: 'Urgent',  estCost: null, status: '' },
-      { item: '', priority: 'High',    estCost: null, status: '' },
-      { item: '', priority: 'High',    estCost: null, status: '' },
-      { item: '', priority: 'Planned', estCost: null, status: '' },
-    ],
+    relocation: 'Moving to a new building by year end — most likely before 2027.',
+    relocationNote: 'No major repair spend planned at the current site; the focus is a clean transition with no service disruption.',
   },
 
   // --------------------------------------------------------------------------
@@ -592,23 +579,28 @@ export const EDIT_SECTIONS = [
       f('sca.f26TotalCost', 'F26 total cost ($)'),
       f('sca.f26CompanyCost', 'F26 company cost ($)'),
       f('sca.f26AgencyCost', 'F26 agency cost ($)'),
-      f('sca.f27SavingsTarget', 'F27 cost take-out target ($)'),
-      f('sca.shiftHours.days.low', 'Days — dock hrs low'),
-      f('sca.shiftHours.days.high', 'Days — dock hrs high'),
-      f('sca.shiftHours.afternoon.low', 'Afternoon — dock hrs low'),
-      f('sca.shiftHours.afternoon.high', 'Afternoon — dock hrs high'),
-      f('sca.shiftHours.midnight.low', 'Midnight — dock hrs low'),
-      f('sca.shiftHours.midnight.high', 'Midnight — dock hrs high'),
+      f('sca.workforce.0.drDock', 'Days — D&R dock'),
+      f('sca.workforce.0.agencyDock', 'Days — agency dock'),
+      f('sca.workforce.0.drAdmin', 'Days — D&R admin'),
+      f('sca.workforce.0.agencyAdmin', 'Days — agency admin'),
+      f('sca.workforce.1.drDock', 'Afternoons — D&R dock'),
+      f('sca.workforce.1.agencyDock', 'Afternoons — agency dock'),
+      f('sca.workforce.1.drAdmin', 'Afternoons — D&R admin'),
+      f('sca.workforce.1.agencyAdmin', 'Afternoons — agency admin'),
+      f('sca.workforce.2.drDock', 'Midnights — D&R dock'),
+      f('sca.workforce.2.agencyDock', 'Midnights — agency dock'),
+      f('sca.workforce.2.drAdmin', 'Midnights — D&R admin'),
+      f('sca.workforce.2.agencyAdmin', 'Midnights — agency admin'),
     ],
   },
   {
     title: 'F27 Savings Initiatives',
-    fields: DEFAULT_DATA.initiatives.flatMap((_, i) => [
-      f(`initiatives.${i}.name`, `#${i + 1} name`, 'text'),
-      f(`initiatives.${i}.annual`, `#${i + 1} F27 plan ($)`),
-      f(`initiatives.${i}.ytd`, `#${i + 1} realized YTD ($)`),
-      f(`initiatives.${i}.status`, `#${i + 1} status`, 'text'),
-    ]),
+    fields: [
+      f('initiatives.0.annual', 'Dispatcher role ($/yr)'),
+      f('initiatives.1.name', 'Next initiative name', 'text'),
+      f('initiatives.1.annual', 'Next initiative ($/yr)'),
+      f('sca.f27SavingsTarget', 'F27 cost take-out target ($)'),
+    ],
   },
   {
     title: 'Productivity (Sept MTD)',
@@ -661,14 +653,8 @@ export const EDIT_SECTIONS = [
   {
     title: 'Physical Terminal',
     fields: [
-      f('terminal.doorsTotal', 'Total dock doors'),
-      f('terminal.doorsOutOfService', 'Doors out of service'),
-      ...DEFAULT_DATA.terminal.repairs.flatMap((_, i) => [
-        f(`terminal.repairs.${i}.item`, `Repair ${i + 1} — item`, 'text'),
-        f(`terminal.repairs.${i}.priority`, `Repair ${i + 1} — priority`, 'text'),
-        f(`terminal.repairs.${i}.estCost`, `Repair ${i + 1} — est. cost ($)`),
-        f(`terminal.repairs.${i}.status`, `Repair ${i + 1} — status`, 'text'),
-      ]),
+      f('terminal.relocation', 'Relocation', 'text'),
+      f('terminal.relocationNote', 'Relocation note', 'text'),
     ],
   },
   {
