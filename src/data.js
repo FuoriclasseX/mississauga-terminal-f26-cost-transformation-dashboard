@@ -420,7 +420,25 @@ export const DEFAULT_DATA = {
       { lane: 'Quebec City', lf: [12.5, 0.0, 0.0], load: [60.6, 45.1, 42.4] },
       { lane: 'Windsor', lf: [6.7, 0.0, 0.0], load: [38.5, 36.6, 33.5] },
     ],
+    // Moncton lane by month (for the "excluding Moncton" view)
+    moncton: [
+      { label: 'Jul', loads: 61, over80: 16, loadPct: 81.3, bills: 3266, noCube: 627 },
+      { label: 'Aug', loads: 59, over80: 8, loadPct: 54.7, bills: 2897, noCube: 600 },
+      { label: 'Sep', loads: 48, over80: 16, loadPct: 79.2, bills: 2466, noCube: 544 },
+    ],
+    monthBills: [
+      { label: 'Jul', bills: 21169, noCube: 1230 },
+      { label: 'Aug', bills: 18759, noCube: 968 },
+      { label: 'Sep', bills: 15934, noCube: 968 },
+    ],
+    // Distance bands as grouped in the report (lane type = "Not Defined" for all loads)
+    bands: [
+      { band: '<500', lanes: 'Montreal, Ottawa, Windsor, Woodstock', months: [[128, 49, 78.6], [118, 37, 68.4], [97, 24, 64.7]] },
+      { band: '<1,000', lanes: 'Moncton, Quebec City', months: [[75, 16, 72.7], [75, 8, 52.6], [62, 16, 70.9]] },
+      { band: '>1,000', lanes: 'Burnaby, Calgary, Winnipeg, Edmonton, Dartmouth, Saskatoon', months: [[113, 58, 85.2], [100, 53, 89.2], [86, 50, 83.3]] },
+    ],
     monctonNoCube: 1771,     // Moncton lane bills with no cube, Jul–Sep (627 + 600 + 544)
+    toyotaNote: 'Toyota loads our trailer at Bowmanville; we fill the rest in Mississauga before the linehaul departs. Toyota footage is not being captured correctly — being fixed now.',
   },
 
   // --------------------------------------------------------------------------

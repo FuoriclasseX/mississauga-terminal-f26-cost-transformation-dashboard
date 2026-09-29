@@ -1019,6 +1019,148 @@ const ReweighCard = ({ r }) => {
   );
 };
 
+// --- Load factor with "excluding Moncton" toggle ------------------------------
+const LoadFactorCard = ({ lf }) => {
+  const [exMoncton, setExMoncton] = useState(false);
+  const agg = (rows) => {
+    const loads = sum(rows.map((r) => r.loads));
+    const over80 = sum(rows.map((r) => r.over80));
+    const loadW = sum(rows.map((r) => r.loads * r.loadPct));
+    return { loads, over80, lfScore: loads ? (over80 / loads) * 100 : null, loadPct: loads ? loadW / loads : null };
+  };
+  const months = lf.months.map((m, i) => {
+    if (!exMoncton) return m;
+    const mo = lf.moncton[i];
+    const loads = m.loads - mo.loads;
+    const over80 = m.over80 - mo.over80;
+    return { ...m, loads, over80, lfScore: +((over80 / loads) * 100).toFixed(1), loadPct: +((m.loads * m.loadPct - mo.loads * mo.loadPct) / loads).toFixed(1) };
+  });
+  const tot = agg(months);
+  const billsAll = sum(lf.monthBills.map((m) => m.bills));
+  const noCubeAll = sum(lf.monthBills.map((m) => m.noCube));
+  const moBills = sum(lf.moncton.map((m) => m.bills));
+  const moNoCube = sum(lf.moncton.map((m) => m.noCube));
+  const bills = exMoncton ? billsAll - moBills : billsAll;
+  const noCube = exMoncton ? noCubeAll - moNoCube : noCubeAll;
+  const mo = agg(lf.moncton);
+  const bands = lf.bands.map((b) => {
+    const t = agg(b.months.map(([loads, over80, loadPct]) => ({ loads, over80, loadPct })));
+    return { band: b.band, lanes: b.lanes, loads: t.loads, lfScore: +t.lfScore.toFixed(1), loadPct: +t.loadPct.toFixed(1) };
+  });
+  const lanes = exMoncton ? lf.lanes.filter((l) => l.lane !== 'Moncton') : lf.lanes;
+
+  return (
+    <Card
+      title="Load factor — outbound"
+      subtitle="Load factor report · Mississauga · F27 Jul–Sep"
+      icon={Truck}
+      right={
+        <div className="flex rounded-lg bg-gray-100 p-1 text-xs font-medium">
+          {[
+            [false, 'All lanes'],
+            [true, 'Excluding Moncton'],
+          ].map(([v, label]) => (
+            <button
+              key={label}
+              onClick={() => setExMoncton(v)}
+              className={`rounded-md px-3 py-1.5 transition-colors ${exMoncton === v ? 'bg-white text-purple-700 shadow' : 'text-gray-600 hover:text-gray-800'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      }
+    >
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-lg bg-amber-50 p-3">
+          <p className="text-xs text-gray-500">LF score</p>
+          <p className="text-2xl font-bold text-amber-700">{isNum(tot.lfScore) ? pct(tot.lfScore) : <Tbc small />}</p>
+          <p className="text-xs text-gray-500">loads over 80% full</p>
+        </div>
+        <div className="rounded-lg bg-gray-50 p-3">
+          <p className="text-xs text-gray-500">Avg load %</p>
+          <p className="text-2xl font-bold text-gray-900">{isNum(tot.loadPct) ? pct(tot.loadPct) : <Tbc small />}</p>
+        </div>
+        <div className="rounded-lg bg-gray-50 p-3">
+          <p className="text-xs text-gray-500">Loads</p>
+          <p className="text-2xl font-bold text-gray-900">{num(tot.loads)}</p>
+        </div>
+        <div className="rounded-lg bg-gray-50 p-3">
+          <p className="text-xs text-gray-500">Bills with no cube</p>
+          <p className="text-2xl font-bold text-gray-900">{pct((noCube / bills) * 100)}</p>
+          <p className="text-xs text-gray-500">{num(noCube)} of {num(bills)}</p>
+        </div>
+      </div>
+      {exMoncton && <p className="mb-3 text-xs italic text-gray-500">Excluding the Moncton lane ({num(mo.loads)} loads) — calculated from the load factor report.</p>}
+
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={months} margin={{ top: 20, right: 10, bottom: 0, left: -15 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+          <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+          <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v)} />
+          <Legend />
+          <Bar dataKey="lfScore" name="LF score %" fill="#7c3aed" radius={[3, 3, 0, 0]}>
+            <LabelList dataKey="lfScore" position="top" style={{ fontSize: 10, fill: '#374151' }} />
+          </Bar>
+          <Bar dataKey="loadPct" name="Load %" fill="#06b6d4" radius={[3, 3, 0, 0]}>
+            <LabelList dataKey="loadPct" position="top" style={{ fontSize: 10, fill: '#374151' }} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+
+      <p className="mb-2 mt-5 text-sm font-semibold text-gray-700">By distance band (as grouped in the report)</p>
+      <div className="grid grid-cols-3 gap-3">
+        {bands.map((b) => (
+          <div key={b.band} className={`rounded-lg p-3 ${b.lfScore >= 50 ? 'bg-green-50' : b.lfScore < 25 ? 'bg-red-50' : 'bg-gray-50'}`}>
+            <p className="text-xs font-semibold text-gray-700">{b.band}</p>
+            <p className="text-lg font-bold text-gray-900">{pct(b.lfScore)} <span className="text-xs font-normal text-gray-500">LF score</span></p>
+            <p className="text-xs text-gray-600">Load {pct(b.loadPct)} · {num(b.loads)} loads</p>
+            <p className="mt-1 text-[11px] leading-tight text-gray-500">{b.lanes}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-1 text-xs text-gray-500">The report has no headhaul/backhaul field (lane type is "Not Defined"), so lanes are grouped by the report's distance bands. Bands include Moncton.</p>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-200 text-left text-gray-500">
+              <th className="py-1.5 pr-2 font-semibold">Lane (LF score)</th>
+              <th className="py-1.5 pr-2 text-right font-semibold">Jul</th>
+              <th className="py-1.5 pr-2 text-right font-semibold">Aug</th>
+              <th className="py-1.5 text-right font-semibold">Sep</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lanes.map((l) => (
+              <tr key={l.lane} className={`border-b border-gray-100 ${l.lane === 'Moncton' ? 'bg-amber-50' : ''}`}>
+                <td className="py-1.5 pr-2 font-medium text-gray-700">{l.lane}{l.lane === 'Moncton' && ' *'}</td>
+                {l.lf.map((v, i) => (
+                  <td key={i} className={`py-1.5 pr-2 text-right font-semibold ${v >= 60 ? 'text-green-700' : v < 15 ? 'text-red-600' : 'text-gray-700'}`}>{pct(v)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+        <p className="font-semibold">* Toyota baseload footage</p>
+        <p>{lf.toyotaNote}</p>
+        <p className="mt-1">
+          Moncton: <span className="font-semibold">{pct((moNoCube / moBills) * 100)} of bills have no cube</span> vs{' '}
+          {pct(((noCubeAll - moNoCube) / (billsAll - moBills)) * 100)} on all other lanes, and many Moncton loads carry the same 24–27 no-cube bills — the pattern of an uncaptured baseload. Measured LF on those loads is understated.
+        </p>
+      </div>
+      <div className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+        Western lanes are strong (Burnaby {pct(lf.lanes[0].lf[2])} in Sept). Windsor, Quebec City and Dartmouth run consistently light — consolidation / frequency review.
+      </div>
+      <Source>LF score = share of loads over 80% full · Load % = load-weighted average. Excluding-Moncton and band figures are calculated from the report.</Source>
+    </Card>
+  );
+};
+
 // --- SCA & Savings ---------------------------------------------------------
 const ScaTab = ({ d, x }) => {
   const s = d.sca;
@@ -1512,68 +1654,7 @@ const ProductivityTab = ({ d, x }) => {
       <PdCard p={d.pd} />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <Card title="Load factor — outbound" subtitle="Load factor report · Mississauga · F27 Jul–Sep" icon={Truck}>
-          <div className="mb-4 grid grid-cols-3 gap-3">
-            <div className="rounded-lg bg-amber-50 p-3">
-              <p className="text-xs text-gray-500">LF score F27</p>
-              <p className="text-2xl font-bold text-amber-700"><V v={lf.total.lfScore} fmt={(v) => pct(v)} small /></p>
-              <p className="text-xs text-gray-500">loads over 80% full</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500">Avg load %</p>
-              <p className="text-2xl font-bold text-gray-900"><V v={lf.total.loadPct} fmt={(v) => pct(v)} small /></p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500">Loads</p>
-              <p className="text-2xl font-bold text-gray-900"><V v={lf.total.loads} fmt={num} small /></p>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={lf.months} margin={{ top: 20, right: 10, bottom: 0, left: -15 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v)} />
-              <Legend />
-              <Bar dataKey="lfScore" name="LF score %" fill="#7c3aed" radius={[3, 3, 0, 0]}>
-                <LabelList dataKey="lfScore" position="top" style={{ fontSize: 10, fill: '#374151' }} />
-              </Bar>
-              <Bar dataKey="loadPct" name="Load %" fill="#06b6d4" radius={[3, 3, 0, 0]}>
-                <LabelList dataKey="loadPct" position="top" style={{ fontSize: 10, fill: '#374151' }} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-gray-500">
-                  <th className="py-1.5 pr-2 font-semibold">Lane (LF score)</th>
-                  <th className="py-1.5 pr-2 text-right font-semibold">Jul</th>
-                  <th className="py-1.5 pr-2 text-right font-semibold">Aug</th>
-                  <th className="py-1.5 text-right font-semibold">Sep</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lf.lanes.map((l) => (
-                  <tr key={l.lane} className="border-b border-gray-100">
-                    <td className="py-1.5 pr-2 font-medium text-gray-700">{l.lane}</td>
-                    {l.lf.map((v, i) => (
-                      <td key={i} className={`py-1.5 pr-2 text-right font-semibold ${v >= 60 ? 'text-green-700' : v < 15 ? 'text-red-600' : 'text-gray-700'}`}>{pct(v)}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-            <p className="font-semibold">Biggest open opportunity</p>
-            <p>
-              Western lanes are strong (Burnaby {pct(lf.lanes[0].lf[2])} in Sept). Windsor, Quebec City and Dartmouth run consistently light — consolidation / frequency review.
-              {isNum(lf.monctonNoCube) && isNum(lf.total.billsNoCube) && ` Moncton has ${num(lf.monctonNoCube)} of ${num(lf.total.billsNoCube)} bills with no cube (${pct((lf.monctonNoCube / lf.total.billsNoCube) * 100, 0)}) — fixing cube capture lifts that lane's measured LF.`}
-            </p>
-          </div>
-          <Source>LF score = share of loads over 80% full · Load % = average load percentage.</Source>
-        </Card>
+        <LoadFactorCard lf={lf} />
         <Card title="CICO — hours saved" subtitle="Clock-in / clock-out controls" icon={Clock}>
           {cicoData.length ? (
             <ResponsiveContainer width="100%" height={200}>
