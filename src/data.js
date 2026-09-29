@@ -186,7 +186,7 @@ export const DEFAULT_DATA = {
       { label: 'Wk 30', pct: 4.84 }, { label: 'Wk 31', pct: 4.4 },  { label: 'Wk 32', pct: 2.81 },
       { label: 'Wk 33', pct: 3.48 }, { label: 'Wk 34', pct: 3.52 }, { label: 'Wk 35', pct: 5.04 },
       { label: 'Wk 36', pct: 4.43 }, { label: 'Wk 37', pct: 5.95 }, { label: 'Wk 38', pct: 6.47 },
-      { label: 'Wk 39*', pct: 3.86 },
+      { label: 'Wk 39', pct: 3.75 },
     ],
     byCategory: [
       { label: 'OPS – false positive', count: 1530, pct: 44.74 },
