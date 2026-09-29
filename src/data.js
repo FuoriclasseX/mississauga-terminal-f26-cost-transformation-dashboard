@@ -51,6 +51,7 @@ export const DEFAULT_DATA = {
       { name: 'Load securement & decking — ANCRA knock-down pallet decks and security divider deck-board kits', status: 'Planned', note: 'Second tier over short/fragile freight, loads locked in place — no freight falling when doors open (see Productivity)' },
       { name: 'Driver safety reps — top safety-score drivers join the monthly safety meeting and speak for drivers', status: 'Planned', note: 'Proposal to take to Safety' },
       { name: 'Manager & supervisor route ride-alongs — quarterly quota, ramping up', status: 'Planned', note: 'Proposal to take to Safety' },
+      { name: 'Peak-period onboarding — Safety dept supports training and on-the-job spot checks for new dock, general labour and forklift staff', status: 'Planned', note: 'Proposal to take to Safety — peak adds 10–20% more staff on every shift' },
       { name: 'Tailgates + safety moments after every incident (e.g. pinch points)', status: 'Active' },
       { name: 'Forklift pre/post-shift inspections by every operator', status: 'Active' },
       { name: 'No loading forklifts on straight trucks', status: 'Active' },
@@ -617,6 +618,7 @@ export const DEFAULT_DATA = {
   // --------------------------------------------------------------------------
   cico: {
     avgHourlyRate: 33.43,  // Sept MTD $/hr from the productivity dashboard
+    status: 'OK — under review',
     weeks: [
       { label: 'Wk 1 · Sep 1–5',   hoursSaved: null },
       { label: 'Wk 2 · Sep 6–12',  hoursSaved: null },
@@ -624,9 +626,9 @@ export const DEFAULT_DATA = {
       { label: 'Wk 4 · Sep 20–26', hoursSaved: null },
     ],
     drivers: [
-      'Late arrivals — pay starts at actual clock-in, not scheduled start.',
-      'No-lunch punches reviewed daily by the shift supervisor.',
-      'Part-time / early-off shifts released when volume is done.',
+      'SCA team: CICO is currently OK for our freight-bill volume, building size and operation.',
+      'Admin roles form completed for the SCA team — every admin role and its duties documented.',
+      'Still under review — any changes will come out of that review.',
     ],
   },
 

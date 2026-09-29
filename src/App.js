@@ -552,7 +552,7 @@ const SafetyTab = ({ d, x }) => {
         </Card>
       </div>
 
-      <Card title="Driver-led safety — proposal to take to Safety" subtitle="Two F27 initiatives that put drivers at the centre of the safety culture" icon={Truck} className="mb-8">
+      <Card title="People-led safety — proposals to take to Safety" subtitle="Drivers, dock workers, general labour and forklift operators" icon={Truck} className="mb-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           <div>
             <p className="text-base font-bold text-gray-800">1 · Driver safety reps</p>
@@ -609,6 +609,34 @@ const SafetyTab = ({ d, x }) => {
               Example based on {s.driverProgram.drivers} drivers — full pace = drivers ÷ 4 per quarter, split across managers and supervisors. Start with new drivers and
               lower safety scores; findings go to the monthly safety meeting.
             </p>
+          </div>
+        </div>
+        <div className="mt-8 border-t border-gray-100 pt-6">
+          <p className="text-base font-bold text-gray-800">3 · Peak-period onboarding — Safety department on the floor</p>
+          <p className="mt-1 text-sm text-gray-700">
+            In peak we hire 10–20% more staff across all shifts — dock workers, general labour and forklift operators. The Safety representative helps with training
+            material and does on-the-job spot checks, as an added layer on top of the checks operations management already does.
+          </p>
+          <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">How the extra layer helps</p>
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Bullets
+              icon={ChevronRight}
+              color="text-purple-600"
+              items={[
+                'New hires carry the highest injury risk, and peak puts the most of them on the floor at the busiest time.',
+                'Fresh eyes — Safety sees shortcuts that have become normal to people who work the floor every day.',
+                'One training standard on every shift, for dock, general labour and forklift operators.',
+              ]}
+            />
+            <Bullets
+              icon={ChevronRight}
+              color="text-purple-600"
+              items={[
+                'Supervisors stay focused on running peak while coaching still happens on the floor.',
+                'Spot checks coach, not discipline — habits form in the first weeks, so correcting early prevents injuries.',
+                'Shows safety is owned by operations and Safety together — it builds the culture.',
+              ]}
+            />
           </div>
         </div>
         <Source>Proposal — to be agreed with Safety (OHS) before launch.</Source>
@@ -1284,7 +1312,7 @@ const LoadFactorCard = ({ lf }) => {
         </p>
       </div>
       <div className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-        Western lanes are strong (Burnaby {pct(lf.lanes[0].lf[2])} in Sept). Windsor, Quebec City and Dartmouth run consistently light — consolidation / frequency review.
+        Western lanes are strong (Burnaby {pct(lf.lanes[0].lf[2])} in Sept). Windsor, Quebec City and Dartmouth run consistently light — frequency review.
       </div>
       <Source>LF score = share of loads over 80% full · Load % = load-weighted average. Excluding-Moncton and band figures are calculated from the report.</Source>
     </Card>
@@ -1387,7 +1415,7 @@ const QaTab = ({ d, x }) => {
       a: [
         `PPH ${f(p.f27.pph, num)} vs ${f(p.f27.pphGoal, num)} goal (${x.pphVsGoal ? pct(x.pphVsGoal.pct) : '—'}); flat vs F26 (${f(p.f26.pph, num)}).`,
         `Freight got lighter — ${f(p.f27.lbsPerUnit, num)} vs ≈${f(x.lbsPerUnitF26, num)} lbs per unit — while units per hour rose ${x.uphVsLy ? pct(x.uphVsLy.pct) : '—'}.`,
-        'Levers: load factor (Toyota baseload footage capture being fixed), consolidation on light lanes, shift start/end aligned to P&D.',
+        'Levers: load factor (Toyota baseload footage capture being fixed), frequency review on light lanes, shift start/end aligned to P&D.',
       ],
     },
     {
@@ -1439,10 +1467,11 @@ const QaTab = ({ d, x }) => {
       ],
     },
     {
-      q: 'What is new for driver safety?',
+      q: 'What is new in safety for F27?',
       a: [
         'Driver safety reps: top safety-score drivers join the monthly safety meeting and speak for drivers — peers carry more weight than policy, being chosen creates ownership, and drivers raise concerns with a peer they would not raise with a manager.',
         `Manager & supervisor route ride-alongs: quarterly quota ramping ${s2rides(d)} — every driver ridden with at least once a year. Proposal to take to Safety.`,
+        'Peak-period onboarding: we hire 10–20% more staff on every shift in peak — the Safety representative supports training material and on-the-job spot checks for new dock, general labour and forklift staff, an added layer on top of operations checks.',
       ],
     },
     {
@@ -2248,8 +2277,8 @@ const ScaTab = ({ d, x }) => {
         </Card>
       </div>
 
-      <ShiftCard s={s} />
       <LabourCard l={d.labour} />
+      <ShiftCard s={s} />
       <AccessorialCard a={d.accessorials} />
       <ReweighCard r={d.reweighs} />
 
@@ -2266,7 +2295,7 @@ const ShiftCard = ({ s }) => {
   const tot = (k) => sum(w.map((r) => r[k]));
   const varCell = (v) => <span className={`font-semibold ${v > 0 ? 'text-red-600' : 'text-green-700'}`}>{v > 0 ? '+' : ''}{num(v, 2)}</span>;
   return (
-    <Card title="Shifts — hours vs budget and agency vs D&R" subtitle={`Example day · ${s.workforceDate}`} icon={Users} className="mb-8">
+    <Card title="Staffing by shift — agency vs D&R" subtitle={`Headcount, split and ratio per shift, plus dock hours vs budget · example day ${s.workforceDate}`} icon={Users} className="mb-8">
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <div>
           <p className="mb-2 text-sm font-semibold text-gray-700">Dock hours — budget vs actual</p>
@@ -2307,36 +2336,43 @@ const ShiftCard = ({ s }) => {
           <p className="mt-2 text-xs text-gray-500">Total {num(act, 2)} vs {num(tgt, 0)} budget — {num(Math.abs(act - tgt), 2)} hrs {act <= tgt ? 'under' : 'over'}.</p>
         </div>
         <div>
-          <p className="mb-2 text-sm font-semibold text-gray-700">Headcount and ratio — agency : D&R</p>
+          <p className="mb-2 text-sm font-semibold text-gray-700">Headcount per shift — agency vs D&R</p>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-gray-200 text-left text-gray-500">
                 <th className="py-2 pr-2 font-semibold">Shift</th>
-                <th className="py-2 pr-2 text-right font-semibold">Dock (Agency / D&R)</th>
+                <th className="py-2 pr-2 text-right font-semibold">Dock A / D&R</th>
+                <th className="py-2 pr-2 text-right font-semibold">Dock split</th>
                 <th className="py-2 pr-2 text-right font-semibold">Dock ratio</th>
-                <th className="py-2 pr-2 text-right font-semibold">Admin (Agency / D&R)</th>
-                <th className="py-2 text-right font-semibold">Admin ratio</th>
+                <th className="py-2 pr-2 text-right font-semibold">Admin A / D&R</th>
+                <th className="py-2 text-right font-semibold">People</th>
               </tr>
             </thead>
             <tbody>
-              {w.map((r) => (
-                <tr key={r.shift} className="border-b border-gray-100">
-                  <td className="py-2 pr-2 font-medium text-gray-800">{r.shift}</td>
-                  <td className="py-2 pr-2 text-right">{r.agencyDock} / {r.drDock}</td>
-                  <td className="py-2 pr-2 text-right font-semibold">{ratio(r.agencyDock, r.drDock)}</td>
-                  <td className="py-2 pr-2 text-right">{r.agencyAdmin} / {r.drAdmin}</td>
-                  <td className="py-2 text-right font-semibold">{ratio(r.agencyAdmin, r.drAdmin)}</td>
-                </tr>
-              ))}
-              <tr className="bg-gray-50 font-bold">
-                <td className="py-2 pr-2">Total</td>
-                <td className="py-2 pr-2 text-right">{tot('agencyDock')} / {tot('drDock')}</td>
-                <td className="py-2 pr-2 text-right">{ratio(tot('agencyDock'), tot('drDock'))}</td>
-                <td className="py-2 pr-2 text-right">{tot('agencyAdmin')} / {tot('drAdmin')}</td>
-                <td className="py-2 text-right">{ratio(tot('agencyAdmin'), tot('drAdmin'))}</td>
-              </tr>
+              {[...w, { shift: 'Total', agencyDock: tot('agencyDock'), drDock: tot('drDock'), agencyAdmin: tot('agencyAdmin'), drAdmin: tot('drAdmin'), total: true }].map((r) => {
+                const dockN = r.agencyDock + r.drDock;
+                const people = dockN + r.agencyAdmin + r.drAdmin;
+                const share = dockN ? (r.agencyDock / dockN) * 100 : 0;
+                return (
+                  <tr key={r.shift} className={r.total ? 'bg-gray-50 font-bold' : 'border-b border-gray-100'}>
+                    <td className="py-2 pr-2 font-medium text-gray-800">{r.shift}</td>
+                    <td className="py-2 pr-2 text-right">{r.agencyDock} / {r.drDock}</td>
+                    <td className="py-2 pr-2 text-right">
+                      <div className="ml-auto flex h-2.5 w-20 overflow-hidden rounded-full bg-gray-100">
+                        <div className="bg-cyan-500" style={{ width: `${share}%` }} />
+                        <div className="bg-purple-600" style={{ width: `${100 - share}%` }} />
+                      </div>
+                      <span className="text-xs text-gray-600">{pct(share, 0)} / {pct(100 - share, 0)}</span>
+                    </td>
+                    <td className="py-2 pr-2 text-right font-semibold">{ratio(r.agencyDock, r.drDock)}</td>
+                    <td className="py-2 pr-2 text-right">{r.agencyAdmin} / {r.drAdmin}</td>
+                    <td className="py-2 text-right font-semibold">{people}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          <p className="mt-2 text-xs text-gray-500"><span className="text-cyan-600">■</span> Agency <span className="ml-2 text-purple-600">■</span> D&R. Admin ratio: {ratio(tot('agencyAdmin'), tot('drAdmin'))} ({tot('agencyAdmin')} agency / {tot('drAdmin')} D&R).</p>
           <p className="mt-2 text-xs text-gray-500">People who worked that day. Not Day & Ross = agency. Dock / admin by department; admin includes dispatch.</p>
         </div>
       </div>
@@ -2481,40 +2517,20 @@ const ProductivityTab = ({ d, x }) => {
 
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <LoadFactorCard lf={lf} />
-        <Card title="CICO — hours saved" subtitle="Clock-in / clock-out controls" icon={Clock}>
-          {cicoData.length ? (
+        <Card title="CICO" subtitle="Clock-in / clock-out — SCA team review" icon={Clock} right={<Chip tone="green">{c.status}</Chip>}>
+          <Bullets items={c.drivers} />
+          {cicoData.length > 0 && (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={c.weeks} margin={{ top: 20, right: 10, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${num(v, 1)} hrs`} />
-                <Bar dataKey="hoursSaved" name="Hours saved" fill="#7c3aed" radius={[4, 4, 0, 0]}>
-                  <LabelList dataKey="hoursSaved" position="top" style={{ fontSize: 11, fill: '#374151' }} />
-                </Bar>
+                <Bar dataKey="hoursSaved" name="Hours saved" fill="#7c3aed" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : (
-            <EmptyChart height={200} />
           )}
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500">Hours saved</p>
-              <p className="text-xl font-bold text-gray-900">{x.cicoHasHours ? num(x.cicoHours, 1) : <Tbc small />}</p>
-            </div>
-            <div className="rounded-lg bg-green-50 p-3">
-              <p className="text-xs text-gray-500">$ saved</p>
-              <p className="text-xl font-bold text-green-700">{isNum(x.cicoValue) ? money(x.cicoValue) : <Tbc small />}</p>
-            </div>
-            <div className="rounded-lg bg-purple-50 p-3">
-              <p className="text-xs text-gray-500">Annualized</p>
-              <p className="text-xl font-bold text-purple-700">{isNum(x.cicoAnnualized) ? kMoney(x.cicoAnnualized) : <Tbc small />}</p>
-            </div>
-          </div>
-          <div className="mt-4">
-            <Bullets items={c.drivers} icon={ChevronRight} color="text-purple-600" />
-          </div>
-          <Source>$ saved = hours × {isNum(c.avgHourlyRate) ? money(c.avgHourlyRate, 2) : 'TBC'}/hr (September cost per dock hour).</Source>
+          {isNum(x.cicoValue) && <p className="mt-3 text-sm text-gray-700">Hours saved {num(x.cicoHours, 1)} ≈ {money(x.cicoValue)}.</p>}
         </Card>
       </div>
 
