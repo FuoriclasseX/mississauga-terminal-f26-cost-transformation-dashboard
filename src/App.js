@@ -201,7 +201,7 @@ const TONES = {
   gray: 'bg-gray-100 text-gray-700',
   green: 'bg-green-100 text-green-700',
   red: 'bg-red-100 text-red-700',
-  purple: 'bg-purple-100 text-purple-700',
+  purple: 'bg-orange-100 text-orange-700',
   blue: 'bg-blue-100 text-blue-700',
   amber: 'bg-amber-100 text-amber-700',
 };
@@ -234,7 +234,7 @@ const Card = ({ title, subtitle, icon: Icon, children, className = '', right }) 
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h3 className="flex items-center gap-2 text-lg font-bold text-gray-800">
-            {Icon && <Icon className="h-5 w-5 text-purple-600" />}
+            {Icon && <Icon className="h-5 w-5 text-orange-600" />}
             {title}
           </h3>
           {subtitle && <p className="mt-0.5 text-sm text-gray-500">{subtitle}</p>}
@@ -274,7 +274,7 @@ const PageHeader = ({ eyebrow, title, subtitle, icon: Icon, right }) => (
   <div className="mb-8 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 p-8 text-white shadow-xl">
     <div className="flex flex-wrap items-start justify-between gap-6">
       <div className="max-w-4xl">
-        <p className="text-sm font-semibold uppercase tracking-wider text-purple-300">{eyebrow}</p>
+        <p className="text-sm font-semibold uppercase tracking-wider text-orange-400">{eyebrow}</p>
         <h2 className="mt-1 flex items-center gap-3 text-3xl font-bold">
           {Icon && <Icon className="h-8 w-8" />}
           {title}
@@ -323,14 +323,14 @@ const TABS = [
 const STAGES = {
   safety: [
     { k: 'Pending', p: 10, color: '#9ca3af' },
-    { k: 'Planned', p: 25, color: '#d97706' },
+    { k: 'Planned', p: 25, color: '#f59e0b' },
     { k: 'In progress', p: 60, color: '#2563eb' },
     { k: 'Completed', p: 100, color: '#059669' },
-    { k: 'Active', p: 100, color: '#7c3aed', hint: 'ongoing' },
+    { k: 'Active', p: 100, color: '#334155', hint: 'ongoing' },
   ],
   savings: [
     { k: 'Pending', p: 10, color: '#9ca3af' },
-    { k: 'Planned', p: 25, color: '#d97706' },
+    { k: 'Planned', p: 25, color: '#f59e0b' },
     { k: 'In progress', p: 60, color: '#2563eb' },
     { k: 'Confirmed', p: 100, color: '#059669' },
   ],
@@ -407,7 +407,7 @@ const OverviewTab = ({ d, x, go }) => {
   return (
     <>
       <div className="mb-8 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 p-8 text-white shadow-xl">
-        <p className="text-sm font-semibold uppercase tracking-wider text-purple-300">
+        <p className="text-sm font-semibold uppercase tracking-wider text-orange-400">
           {d.meta.fiscalYear} Senior Leadership Review · {d.meta.presentationDate}
         </p>
         <h2 className="mt-2 text-4xl font-bold">{d.meta.terminal} Terminal</h2>
@@ -430,7 +430,7 @@ const OverviewTab = ({ d, x, go }) => {
             </span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-white/20">
-            <div className="h-full rounded-full bg-purple-400" style={{ width: `${fp.pct}%` }} />
+            <div className="h-full rounded-full bg-orange-400" style={{ width: `${fp.pct}%` }} />
           </div>
         </div>
       </div>
@@ -508,13 +508,13 @@ const OverviewTab = ({ d, x, go }) => {
                   : '',
               },
               {
-                show: isNum(x.cppPctOfTarget),
+                show: false, // shown in the KPI row above
                 icon: Target,
                 title: `SCA dock cost per PRO ${isNum(d.sca.costPerProMtd) ? money(d.sca.costPerProMtd, 2) : ''} vs ${isNum(d.sca.costPerProTarget) ? money(d.sca.costPerProTarget, 2) : ''} target`,
                 text: isNum(x.cppPctOfTarget) ? `${pct(x.cppPctOfTarget)} of target — ${money(x.cppUnder, 2)} under on ${num(d.sca.fbCountMtd)} freight bills (≈${kMoney(x.cppBelowTargetValue || 0)} MTD).` : '',
               },
               {
-                show: isNum(p27.otHours),
+                show: false, // OT is on the Productivity tab
                 icon: CheckCircle,
                 title: `Overtime held to ${isNum(p27.otHours) ? num(p27.otHours) : ''} hours`,
                 text: isNum(p27.otPct) ? `${pct(p27.otPct)} of dock hours in ${d.productivity.period}.` : '',
@@ -548,14 +548,14 @@ const OverviewTab = ({ d, x, go }) => {
               <button
                 key={a.id}
                 onClick={() => go(a.id)}
-                className="flex w-full items-start gap-4 rounded-lg p-3 text-left transition-colors hover:bg-purple-50"
+                className="flex w-full items-start gap-4 rounded-lg p-3 text-left transition-colors hover:bg-orange-50"
               >
-                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 font-bold text-white">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-orange-600 font-bold text-white">
                   {i + 1}
                 </span>
                 <div className="flex-1">
                   <p className="flex items-center gap-2 font-semibold text-gray-800">
-                    <a.icon className="h-4 w-4 text-purple-600" /> {a.title}
+                    <a.icon className="h-4 w-4 text-orange-600" /> {a.title}
                   </p>
                   <p className="text-sm text-gray-600">{a.text}</p>
                 </div>
@@ -579,91 +579,24 @@ const SafetyTab = ({ d, x, onSet }) => {
         eyebrow="1 · Safety"
         icon={Shield}
         title="Safety — TRIR, Daily Practice & F27 Initiatives"
-        subtitle="Where we are today, the processes in place, and what we are adding to improve in F27."
+        subtitle="Zero recordables in F27 so far. What we do every day, and what we are adding for F27."
       />
-      {isNum(s.trirF27Ytd) && s.trirF27Ytd === 0 && s.recordablesF27Ytd === 0 && (
-        <div className="mb-8 flex items-center gap-3 rounded-xl bg-green-50 p-5 text-green-900 shadow">
-          <CheckCircle className="h-6 w-6 flex-shrink-0 text-green-600" />
-          <p className="text-lg">
-            <span className="font-bold">Zero recordable incidents in F27 to date (Jul–Aug)</span> — TRIR 0.00 vs {isNum(s.trirF26) ? num(s.trirF26, 2) : '—'} in F26.
-            <span className="ml-2 text-xs text-green-700">Source: Management Control Report — F27 TRIR, Aug 2026.</span>
-          </p>
-        </div>
-      )}
-      {s.quote && (
-        <blockquote className="mb-8 rounded-xl border-l-4 border-purple-600 bg-purple-50 p-5 text-lg italic text-purple-900 shadow">
-          “{s.quote}”
-        </blockquote>
-      )}
-      <Card title="Peak ramp-up: Safety & Operations onboarding for new agency staff" subtitle="When peak needs 10% or more new temporary workers — November and spring/summer e-commerce peaks" icon={Users} className="mb-8" right={<Chip tone="green">Supported by Safety</Chip>}>
-          <p className="mt-1 text-sm text-gray-700">
-            When a peak needs 10% or more new temporary (agency) workers — the November and spring/summer e-commerce peaks — Safety and Operations onboard them together
-            across all shifts: dock workers, general labour and forklift operators. Safety is part of phasing in every new temp worker, as an added layer on
-            top of the checks operations management already does.
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <div>
-              <p className="mb-2 text-sm font-semibold text-gray-700">What Safety covers with new staff</p>
-              <Bullets
-                icon={ChevronRight}
-                color="text-purple-600"
-                items={[
-                  'Safe Work Practices (SWPs) for their job.',
-                  'Lifting guidelines and techniques.',
-                  'Truck and trailer pull safety.',
-                  'Forklift safety — including the seat belt, every time.',
-                  'Right to refuse unsafe work.',
-                ]}
-              />
-            </div>
-            <div>
-              <p className="mb-2 text-sm font-semibold text-gray-700">Check-ins — short questions and feedback</p>
-              <Bullets
-                icon={ChevronRight}
-                color="text-purple-600"
-                items={[
-                  '“Have you been wearing your seat belt getting on and off the forklift?”',
-                  '“If there is a spill, what do you do?” — stop and see the supervisor.',
-                  '“Do you know you can refuse unsafe work?”',
-                  '“Is anything slowing you down or feeling unsafe?” — feedback goes to the supervisor and the monthly safety meeting.',
-                ]}
-              />
-            </div>
-          </div>
-          <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">How the extra layer helps</p>
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Bullets
-              icon={ChevronRight}
-              color="text-purple-600"
-              items={[
-                'New hires carry the highest injury risk, and peak puts the most of them on the floor at the busiest time.',
-                'Fresh eyes — Safety sees shortcuts that have become normal to people who work the floor every day.',
-                'One training standard on every shift, for dock, general labour and forklift operators.',
-              ]}
-            />
-            <Bullets
-              icon={ChevronRight}
-              color="text-purple-600"
-              items={[
-                'Supervisors stay focused on running peak while coaching still happens on the floor.',
-                'Spot checks coach, not discipline — habits form in the first weeks, so correcting early prevents injuries.',
-                'People who feel cared for, care — new staff see that safety is owned by operations and Safety together.',
-              ]}
-            />
-          </div>
-      </Card>
-      <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-5">
+      <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
         <Kpi
           icon={Shield}
           tone={trirGood === null ? 'blue' : trirGood ? 'green' : 'red'}
           label="TRIR F27 YTD"
           value={<V v={s.trirF27Ytd} fmt={(v) => num(v, 2)} />}
         />
-        <Kpi icon={Target} tone="purple" label="12-month avg" value={<V v={s.trir12mmAvg} fmt={(v) => num(v, 2)} />} />
         <Kpi icon={Calendar} tone="gray" label="TRIR F26" value={<V v={s.trirF26} fmt={(v) => num(v, 2)} />} />
-        <Kpi icon={AlertTriangle} tone={s.recordablesF27Ytd === 0 ? 'green' : 'amber'} label="Recordables F27 YTD" value={<V v={s.recordablesF27Ytd} fmt={num} />} />
-        <Kpi icon={CheckCircle} tone="green" label="Days since last recordable" value={<V v={x.daysSinceRecordable} fmt={num} />} sub={s.lastRecordableDate ? `Last: Sep 10, 2025` : null} />
+        <Kpi icon={AlertTriangle} tone={s.recordablesF27Ytd === 0 ? 'green' : 'amber'} label="Recordables YTD" value={<V v={s.recordablesF27Ytd} fmt={num} />} />
+        <Kpi icon={CheckCircle} tone="green" label="Days since recordable" value={<V v={x.daysSinceRecordable} fmt={num} />} sub={s.lastRecordableDate ? `Last: Sep 10, 2025` : null} />
       </div>
+      {s.quote && (
+        <blockquote className="mb-8 rounded-xl border-l-4 border-orange-600 bg-orange-50 p-5 text-lg italic text-orange-900 shadow">
+          “{s.quote}”
+        </blockquote>
+      )}
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
         <Card title="Safety initiatives — tracker" subtitle="Pending → Planned → In progress → Completed / Active" icon={ClipboardCheck} className="lg:col-span-3">
           <StatusSummary items={s.initiatives} stages={STAGES.safety} doneKeys={['Completed', 'Active']} />
@@ -683,35 +616,77 @@ const SafetyTab = ({ d, x, onSet }) => {
           </ul>
         </Card>
         <Card title="Ideas to action" icon={Zap} className="self-start lg:col-span-2">
-          <Bullets items={s.ideas} icon={ChevronRight} color="text-purple-600" />
+          <Bullets items={s.ideas} icon={ChevronRight} color="text-orange-600" />
         </Card>
       </div>
 
-      <Card title="People-led safety — proposals to take to Safety" subtitle="Driver safety reps and manager & supervisor ride-alongs" icon={Truck} className="mb-8">
+      <Card title="Peak ramp-up — Safety & Operations onboarding" subtitle="When peak needs 10% or more new temp (agency) workers · November and spring/summer" icon={Users} className="mb-8" right={<Chip tone="green">Supported by Safety</Chip>}>
+          <p className="mt-1 text-sm text-gray-700">
+            Safety and Operations onboard new temp workers together on every shift — dock, general labour and forklift operators — as a second layer on top of
+            the checks supervisors already do.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <div>
+              <p className="mb-2 text-sm font-semibold text-gray-700">Safety covers</p>
+              <Bullets
+                icon={ChevronRight}
+                color="text-orange-600"
+                items={[
+                  'Safe work practices for their job',
+                  'Lifting technique',
+                  'Truck and trailer pull safety',
+                  'Forklift safety and seat belt',
+                  'Right to refuse unsafe work',
+                ]}
+              />
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-semibold text-gray-700">Quick check-ins</p>
+              <Bullets
+                icon={ChevronRight}
+                color="text-orange-600"
+                items={[
+                  '“Seat belt on, every time you get on the forklift?”',
+                  '“Spill — what do you do?” (see the supervisor)',
+                  '“Anything feel unsafe or slow you down?”',
+                ]}
+              />
+            </div>
+          </div>
+          <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">Why it helps</p>
+          <Bullets
+            icon={ChevronRight}
+            color="text-orange-600"
+            items={[
+              'New hires carry the most risk — and peak brings the most of them at the busiest time.',
+              'Fresh eyes catch shortcuts that have become normal; one training standard on every shift.',
+              'Coaching, not discipline — people who feel cared for, care.',
+            ]}
+          />
+      </Card>
+
+      <Card title="Driver-focused proposals" subtitle="To agree with Safety" icon={Truck} className="mb-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           <div>
             <p className="text-base font-bold text-gray-800">1 · Driver safety reps</p>
             <p className="mt-1 text-sm text-gray-700">
-              Drivers with a perfect or top safety score in the Mississauga fleet become driver safety reps. They join the monthly safety meeting, speak for drivers on
-              road and yard concerns, and bring ideas that help leadership fix issues sooner.
+              Top safety-score drivers join the monthly safety meeting and speak for drivers on road and yard concerns.
             </p>
-            <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">Why it works — the people side</p>
+            <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">Why it works</p>
             <Bullets
               icon={ChevronRight}
-              color="text-purple-600"
+              color="text-orange-600"
               items={[
-                'Peers carry more weight than policy — drivers copy the drivers they respect (social proof, role models).',
-                'Being chosen creates ownership — people protect the standards they help set, and act consistently with the role.',
-                'Voice without fear — drivers raise things with a peer they would not raise with a manager (psychological safety), so issues surface earlier.',
-                'Selecting on safety score rewards the behaviour we want to see — recognition reinforces it.',
+                'Drivers follow the drivers they respect.',
+                'Being chosen creates ownership of the standard.',
+                'Drivers tell a peer what they would not tell a manager — issues surface sooner.',
               ]}
             />
           </div>
           <div>
             <p className="text-base font-bold text-gray-800">2 · Manager & supervisor route ride-alongs</p>
             <p className="mt-1 text-sm text-gray-700">
-              Managers and supervisors ride routes with drivers to see road challenges first-hand — docks, customer sites, traffic, securement. Quarterly quota starts
-              lower and builds to a ride-along with every driver at least once a year.
+              Leaders see road challenges first-hand. The quarterly quota starts low and builds to every driver once a year.
             </p>
             <table className="mt-4 w-full text-sm">
               <thead>
@@ -741,27 +716,12 @@ const SafetyTab = ({ d, x, onSet }) => {
               </tbody>
             </table>
             <p className="mt-2 text-xs text-gray-500">
-              Example based on {s.driverProgram.drivers} drivers — full pace = drivers ÷ 4 per quarter, split across managers and supervisors. Start with new drivers and
-              lower safety scores; findings go to the monthly safety meeting.
+              Based on {s.driverProgram.drivers} drivers. Start with new drivers and lower safety scores.
             </p>
           </div>
         </div>
-        <Source>Proposal — to be agreed with Safety (OHS) before launch.</Source>
       </Card>
 
-      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <Card title="What we do every shift" icon={ClipboardCheck}>
-          <Bullets items={s.practices} />
-        </Card>
-        <div className="space-y-8">
-          <Card title="Incident reporting & training" icon={Users}>
-            <Bullets items={s.incidentProcess} icon={CheckCircle} color="text-blue-600" />
-          </Card>
-          <Card title="Site-specific initiatives" icon={Zap}>
-            <Bullets items={s.f27Plans} icon={ChevronRight} color="text-purple-600" />
-          </Card>
-        </div>
-      </div>
     </>
   );
 };
@@ -808,7 +768,7 @@ const ServiceTab = ({ d, x }) => {
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={o.months} margin={{ top: 20, right: 20, bottom: 0, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <ReferenceArea x1="Jul" x2="Sep" fill="#7c3aed" fillOpacity={0.06} label={{ value: 'F27', position: 'insideTopRight', fill: '#7c3aed', fontSize: 12, fontWeight: 600 }} />
+                <ReferenceArea x1="Jul" x2="Sep" fill="#ea580c" fillOpacity={0.06} label={{ value: 'F27', position: 'insideTopRight', fill: '#ea580c', fontSize: 12, fontWeight: 600 }} />
                 <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                 <YAxis domain={[75, 100]} ticks={[75, 80, 85, 90, 95, 100]} tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}%`} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v)} />
@@ -816,11 +776,11 @@ const ServiceTab = ({ d, x }) => {
                 {isNum(o.target) && (
                   <ReferenceLine y={o.target} stroke="#059669" strokeDasharray="5 5" label={{ value: `Target ${o.target}%`, position: 'insideBottomLeft', fill: '#059669', fontSize: 11 }} />
                 )}
-                <Line type="monotone" dataKey="incl" name="Incl. partner carriers" stroke="#7c3aed" strokeWidth={3} dot={{ r: 4 }}>
-                  <LabelList dataKey="incl" position="bottom" style={{ fontSize: 10, fill: '#6d28d9' }} />
+                <Line type="monotone" dataKey="incl" name="Incl. partner carriers" stroke="#ea580c" strokeWidth={3} dot={{ r: 4 }}>
+                  <LabelList dataKey="incl" position="bottom" style={{ fontSize: 10, fill: '#c2410c' }} />
                 </Line>
-                <Line type="monotone" dataKey="excl" name="Excl. partner carriers" stroke="#06b6d4" strokeWidth={3} dot={{ r: 4 }}>
-                  <LabelList dataKey="excl" position="top" style={{ fontSize: 10, fill: '#0e7490' }} />
+                <Line type="monotone" dataKey="excl" name="Excl. partner carriers" stroke="#475569" strokeWidth={3} dot={{ r: 4 }}>
+                  <LabelList dataKey="excl" position="top" style={{ fontSize: 10, fill: '#334155' }} />
                 </Line>
               </LineChart>
             </ResponsiveContainer>
@@ -889,7 +849,7 @@ const ServiceTab = ({ d, x }) => {
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
             <p className="mb-2 text-sm font-semibold text-gray-700">Plan to hold and improve OTS</p>
-            <Bullets items={o.actions} icon={ChevronRight} color="text-purple-600" />
+            <Bullets items={o.actions} icon={ChevronRight} color="text-orange-600" />
           </div>
           <div>
             <p className="mb-2 text-sm font-semibold text-gray-700">Service failures by code — AS excluded (not a service fail)</p>
@@ -907,7 +867,7 @@ const ServiceTab = ({ d, x }) => {
                       <div key={k} className="flex items-center gap-2 text-xs">
                         <span className="w-16 font-semibold text-gray-700">{k}</span>
                         <div className="h-3 flex-1 rounded bg-gray-100">
-                          <div className={`h-3 rounded ${k === fails[0][0] ? 'bg-red-400' : 'bg-purple-400'}`} style={{ width: `${(v / fails[0][1]) * 100}%` }} />
+                          <div className={`h-3 rounded ${k === fails[0][0] ? 'bg-red-400' : 'bg-orange-400'}`} style={{ width: `${(v / fails[0][1]) * 100}%` }} />
                         </div>
                         <span className="w-20 text-right text-gray-700">{v} · {pct((v / total) * 100, 0)}</span>
                       </div>
@@ -1097,7 +1057,7 @@ const MissedPuCard = ({ m }) => {
           <p className="mt-2 text-xs text-amber-800">{m.notes.join(' ')}</p>
         </div>
         <div>
-          <Bullets items={m.actions} icon={ChevronRight} color="text-purple-600" />
+          <Bullets items={m.actions} icon={ChevronRight} color="text-orange-600" />
         </div>
       </div>
     </Card>
@@ -1118,7 +1078,7 @@ const AccessorialCard = ({ a }) => {
             {top.map((r) => (
               <div key={r.label}>
                 <div className="flex justify-between text-xs text-gray-600"><span>{r.label}</span><span className="font-semibold">{num(r.units)}</span></div>
-                <div className="h-2 overflow-hidden rounded-full bg-gray-100"><div className="h-full bg-purple-500" style={{ width: `${(r.units / top[0].units) * 100}%` }} /></div>
+                <div className="h-2 overflow-hidden rounded-full bg-gray-100"><div className="h-full bg-orange-500" style={{ width: `${(r.units / top[0].units) * 100}%` }} /></div>
               </div>
             ))}
           </div>
@@ -1132,7 +1092,7 @@ const AccessorialCard = ({ a }) => {
               <XAxis dataKey="label" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${v}K units`} />
-              <Bar dataKey="k" name="Units (K)" fill="#7c3aed" radius={[3, 3, 0, 0]}>
+              <Bar dataKey="k" name="Units (K)" fill="#ea580c" radius={[3, 3, 0, 0]}>
                 <LabelList dataKey="k" position="top" style={{ fontSize: 10, fill: '#374151' }} />
               </Bar>
             </BarChart>
@@ -1158,7 +1118,7 @@ const LabourCard = ({ l }) => {
     ['OT as % of hours', 'otPct', (v) => pct(v)],
   ];
   return (
-    <Card title="Labour distribution — company employees" subtitle="Terminal Labor Distribution Report · Q1 (Jul–Sep) F26 vs F27 to date" icon={Users} className="mb-8">
+    <Card title="Labour distribution — D&R employees" subtitle="Terminal Labor Distribution Report · Q1 (Jul–Sep) F26 vs F27 to date" icon={Users} className="mb-8">
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
         <div className="overflow-x-auto lg:col-span-3">
           <table className="w-full text-sm">
@@ -1197,7 +1157,7 @@ const LabourCard = ({ l }) => {
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v / 1000}K`} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(v)} />
                 <Bar dataKey="cost" name="Admin cost" radius={[3, 3, 0, 0]}>
-                  {l.adminQ1CostByYear.map((r) => <Cell key={r.fy} fill={r.fy === 'F27' ? '#7c3aed' : '#9ca3af'} />)}
+                  {l.adminQ1CostByYear.map((r) => <Cell key={r.fy} fill={r.fy === 'F27' ? '#ea580c' : '#9ca3af'} />)}
                   <LabelList dataKey="cost" position="top" formatter={(v) => `$${(v / 1000).toFixed(1)}K`} style={{ fontSize: 10, fill: '#374151' }} />
                 </Bar>
               </BarChart>
@@ -1222,9 +1182,9 @@ const PdCard = ({ p }) => (
     </div>
     <div className="mt-4 grid grid-cols-3 gap-3 lg:grid-cols-9">
       {p.ratios.map((t) => (
-        <div key={t.label} className="rounded-lg bg-purple-50 p-3 text-center">
+        <div key={t.label} className="rounded-lg bg-orange-50 p-3 text-center">
           <p className="text-xs text-gray-500">{t.label}</p>
-          <p className="text-lg font-bold text-purple-700"><V v={t.v} fmt={(v) => num(v, t.d || 0)} small /></p>
+          <p className="text-lg font-bold text-orange-700"><V v={t.v} fmt={(v) => num(v, t.d || 0)} small /></p>
         </div>
       ))}
     </div>
@@ -1329,7 +1289,7 @@ const LoadFactorCard = ({ lf }) => {
             <button
               key={label}
               onClick={() => setExMoncton(v)}
-              className={`whitespace-nowrap rounded-md px-3 py-1.5 transition-colors ${exMoncton === v ? 'bg-white text-purple-700 shadow' : 'text-gray-600 hover:text-gray-800'}`}
+              className={`whitespace-nowrap rounded-md px-3 py-1.5 transition-colors ${exMoncton === v ? 'bg-white text-orange-700 shadow' : 'text-gray-600 hover:text-gray-800'}`}
             >
               {label}
             </button>
@@ -1366,10 +1326,10 @@ const LoadFactorCard = ({ lf }) => {
           <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
           <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v)} />
           <Legend />
-          <Bar dataKey="lfScore" name="LF score %" fill="#7c3aed" radius={[3, 3, 0, 0]}>
+          <Bar dataKey="lfScore" name="LF score %" fill="#ea580c" radius={[3, 3, 0, 0]}>
             <LabelList dataKey="lfScore" position="top" style={{ fontSize: 10, fill: '#374151' }} />
           </Bar>
-          <Bar dataKey="loadPct" name="Load %" fill="#06b6d4" radius={[3, 3, 0, 0]}>
+          <Bar dataKey="loadPct" name="Load %" fill="#475569" radius={[3, 3, 0, 0]}>
             <LabelList dataKey="loadPct" position="top" style={{ fontSize: 10, fill: '#374151' }} />
           </Bar>
         </BarChart>
@@ -1535,7 +1495,7 @@ const QaTab = ({ d, x }) => {
       q: 'What about overtime?',
       a: [
         `September: ${f(p.f27.otHours, num)} OT hours (${f(p.f27.otPct, (v) => pct(v))} of dock hours).`,
-        `Q1 company employees: ${f(lab.f27.otHours, (v) => num(v, 1))} OT hours, ${f(lab.f27.otPct, (v) => pct(v))} of hours (F26 Q1 ${f(lab.f26.otHours, (v) => num(v, 1))}).`,
+        `Q1 D&R employees: ${f(lab.f27.otHours, (v) => num(v, 1))} OT hours, ${f(lab.f27.otPct, (v) => pct(v))} of hours (F26 Q1 ${f(lab.f26.otHours, (v) => num(v, 1))}).`,
       ],
     },
     {
@@ -1620,7 +1580,7 @@ const QaTab = ({ d, x }) => {
         subtitle="Answers pulled from the same numbers as the dashboard. Click a question to show or hide its answer."
       />
       <div className="mb-4 flex flex-wrap justify-end gap-2">
-        <button type="button" onClick={() => setOpenQ(qa.map((it) => it.q))} className="rounded-lg border border-purple-200 bg-white px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-50">Show all answers</button>
+        <button type="button" onClick={() => setOpenQ(qa.map((it) => it.q))} className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-sm font-medium text-orange-700 hover:bg-orange-50">Show all answers</button>
         <button type="button" onClick={() => setOpenQ([])} className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Hide all answers</button>
       </div>
       <div className="space-y-3">
@@ -1635,7 +1595,7 @@ const QaTab = ({ d, x }) => {
                 aria-expanded={isOpen}
               >
                 <span>{item.q}</span>
-                <span className="flex flex-shrink-0 items-center gap-1 text-sm font-medium text-purple-700">
+                <span className="flex flex-shrink-0 items-center gap-1 text-sm font-medium text-orange-700">
                   {isOpen ? 'Hide' : 'Show'}
                   <ChevronRight className={`h-5 w-5 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                 </span>
@@ -1644,7 +1604,7 @@ const QaTab = ({ d, x }) => {
                 <ul className="space-y-2 px-6 pb-5">
                   {item.a.map((line, j) => (
                     <li key={j} className="flex gap-3 text-gray-700">
-                      <ChevronRight className="mt-0.5 h-5 w-5 flex-shrink-0 text-purple-600" />
+                      <ChevronRight className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
                       <span>{line}</span>
                     </li>
                   ))}
@@ -1667,9 +1627,9 @@ const STATUS_STYLE = {
   Pending: { card: 'border-gray-200 bg-gray-50', chip: 'gray', color: '#9ca3af' },
   Opportunity: { card: 'border-gray-200 bg-gray-50', chip: 'gray', color: '#6b7280' },
 };
-const PIE_COLORS = ['#7c3aed', '#06b6d4', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#6366f1'];
+const PIE_COLORS = ['#ea580c', '#475569', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#6366f1'];
 
-const DEPT_COLORS = { admin: '#7c3aed', dock: '#06b6d4', pd: '#f59e0b' };
+const DEPT_COLORS = { admin: '#ea580c', dock: '#475569', pd: '#f59e0b' };
 
 const SpendTab = ({ d }) => {
   const s = d.spend;
@@ -1752,7 +1712,7 @@ const SpendTab = ({ d }) => {
         <ResponsiveContainer width="100%" height={340}>
           <ComposedChart data={rows} margin={{ top: 24, right: 10, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            {firstF27 && <ReferenceArea yAxisId="k" x1={firstF27} x2={lastLabel} fill="#7c3aed" fillOpacity={0.07} label={{ value: 'F27', position: 'insideTop', fill: '#7c3aed', fontSize: 12, fontWeight: 700 }} />}
+            {firstF27 && <ReferenceArea yAxisId="k" x1={firstF27} x2={lastLabel} fill="#ea580c" fillOpacity={0.07} label={{ value: 'F27', position: 'insideTop', fill: '#ea580c', fontSize: 12, fontWeight: 700 }} />}
             <XAxis dataKey="label" tick={{ fontSize: 11 }} />
             <YAxis yAxisId="k" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}K`} />
             <YAxis yAxisId="p" orientation="right" domain={[20, 50]} ticks={[20, 30, 40, 50]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
@@ -1776,7 +1736,7 @@ const SpendTab = ({ d }) => {
           <ResponsiveContainer width="100%" height={280}>
             <ComposedChart data={rows} margin={{ top: 20, right: 0, bottom: 0, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              {firstF27 && <ReferenceArea yAxisId="n" x1={firstF27} x2={lastLabel} fill="#7c3aed" fillOpacity={0.07} />}
+              {firstF27 && <ReferenceArea yAxisId="n" x1={firstF27} x2={lastLabel} fill="#ea580c" fillOpacity={0.07} />}
               <XAxis dataKey="label" tick={{ fontSize: 10 }} />
               <YAxis yAxisId="n" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v / 1000}K`} />
               <YAxis yAxisId="w" orientation="right" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}M`} />
@@ -1851,13 +1811,13 @@ const SpendTab = ({ d }) => {
           ))}
         </div>
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="rounded-lg bg-purple-50 p-4 text-sm text-purple-900">
+          <div className="rounded-lg bg-orange-50 p-4 text-sm text-orange-900">
             <p className="font-semibold">Terminal-controlled lines: net {signed(terminalNet, kMoney)} in two months (P&L variance, not booked savings)</p>
-            <p className="mt-1">Contract labour down in Admin and on the dock, and repairs down ahead of the building move. Offsets: cargo claims and company wages.</p>
+            <p className="mt-1">Contract labour down in Admin and on the dock, and repairs down ahead of the building move. Offsets: cargo claims and D&R employee wages.</p>
           </div>
           <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
             <p className="font-semibold">P&D mix — not claimed as terminal savings</p>
-            <p className="mt-1">Agent drivers were replaced by owner operators (agent cost down, owner-operator base and accessorials up) and the fuel subsidy dropped. It lowers the P&L, but it is a network P&D change.</p>
+            <p className="mt-1">Agent driver cost and the fuel subsidy dropped in P&D. It lowers the P&L, but it is a network P&D change — not claimed as terminal savings.</p>
           </div>
         </div>
         <Source>Source: net-amount pivot by department and Terminal Analysis, Aug 2026. Largest terminal lines shown; repairs include yard repairs. Cargo claims use the claims report for August ($13,432.53).</Source>
@@ -1874,8 +1834,8 @@ const SpendTab = ({ d }) => {
             <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={50} />
             <YAxis domain={[40, 80]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
             <Tooltip contentStyle={tooltipStyle} formatter={(v) => (isNum(v) ? pct(v) : 'not valid')} />
-            <Line type="monotone" dataKey="ratio" name="Cost % of revenue" stroke="#7c3aed" strokeWidth={3} dot={{ r: 3 }} connectNulls={false}>
-              <LabelList dataKey="ratio" position="top" formatter={(v) => (isNum(v) ? v.toFixed(0) : '')} style={{ fontSize: 9, fill: '#6d28d9' }} />
+            <Line type="monotone" dataKey="ratio" name="Cost % of revenue" stroke="#ea580c" strokeWidth={3} dot={{ r: 3 }} connectNulls={false}>
+              <LabelList dataKey="ratio" position="top" formatter={(v) => (isNum(v) ? v.toFixed(0) : '')} style={{ fontSize: 9, fill: '#c2410c' }} />
             </Line>
           </LineChart>
         </ResponsiveContainer>
@@ -1904,7 +1864,7 @@ const outlookTotal = (d) => {
   }));
 };
 
-const OUTLOOK_COLORS = { 'Admin labour': '#7c3aed', 'Dock labour': '#06b6d4' };
+const OUTLOOK_COLORS = { 'Admin labour': '#ea580c', 'Dock labour': '#475569' };
 
 const SavingsOutlook = ({ d, identified }) => {
   const so = d.savingsOutlook;
@@ -1943,14 +1903,14 @@ const SavingsOutlook = ({ d, identified }) => {
   return (
     <Card title="F27 savings outlook — monthly and yearly roll-up" subtitle="Jul–Aug actual, Sep–Jun outlook at the current rate · savings vs the same month in F26" icon={TrendingUp} className="mb-8">
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="rounded-xl bg-purple-50 p-4">
+        <div className="rounded-xl bg-orange-50 p-4">
           <p className="text-sm text-gray-600">Admin contract labour</p>
-          <p className="text-3xl font-bold text-purple-700">{sv(byGroup[0].year)}</p>
+          <p className="text-3xl font-bold text-orange-700">{sv(byGroup[0].year)}</p>
           <p className="text-xs text-gray-600">≈{sv(byGroup[0].year / 12)} / month · F27 outlook</p>
         </div>
-        <div className="rounded-xl bg-cyan-50 p-4">
+        <div className="rounded-xl bg-slate-100 p-4">
           <p className="text-sm text-gray-600">Dock contract labour</p>
-          <p className="text-3xl font-bold text-cyan-700">{sv(byGroup[1].year)}</p>
+          <p className="text-3xl font-bold text-slate-700">{sv(byGroup[1].year)}</p>
           <p className="text-xs text-gray-600">≈{sv(byGroup[1].year / 12)} / month · F27 outlook</p>
         </div>
         <div className="rounded-xl bg-green-50 p-4">
@@ -1971,7 +1931,7 @@ const SavingsOutlook = ({ d, identified }) => {
           <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={chart} margin={{ top: 20, right: 10, bottom: 0, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <ReferenceArea yAxisId="m" x1={chart[n].m} x2={chart[chart.length - 1].m} fill="#7c3aed" fillOpacity={0.06} label={{ value: 'Outlook', position: 'insideTopRight', fill: '#7c3aed', fontSize: 12, fontWeight: 700 }} />
+              <ReferenceArea yAxisId="m" x1={chart[n].m} x2={chart[chart.length - 1].m} fill="#ea580c" fillOpacity={0.06} label={{ value: 'Outlook', position: 'insideTopRight', fill: '#ea580c', fontSize: 12, fontWeight: 700 }} />
               <XAxis dataKey="m" tick={{ fontSize: 11 }} />
               <YAxis yAxisId="m" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}K`} />
               <YAxis yAxisId="c" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}K`} />
@@ -2034,7 +1994,7 @@ const SavingsOutlook = ({ d, identified }) => {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-lg bg-purple-50 p-4 text-sm text-purple-900">
+        <div className="rounded-lg bg-orange-50 p-4 text-sm text-orange-900">
           <p className="font-semibold">How we hold and grow the outlook — contract labour</p>
           <p className="mt-1">Hold the Jul–Aug rates: Admin contract labour {pct(Math.abs(lines[0].rate * 100), 0)} lower, Dock contract labour {pct(Math.abs(lines[1].rate * 100), 0)} lower. Every extra 1% off F26 contract labour ≈ {kMoney(labourOnePct)}/yr (Admin {kMoney(onePct('Admin labour'))}, Dock {kMoney(onePct('Dock labour'))}).</p>
         </div>
@@ -2052,7 +2012,7 @@ const SavingsOutlook = ({ d, identified }) => {
         </div>
       </div>
       <Source>
-        Outlook covers the two contract labour buckets (Admin and Dock) plus the confirmed dispatcher saving: each bucket's Jul–Aug % change vs the same months of F26, applied to the remaining F26 months if the rate holds. Estimates, not booked savings. Company wages & benefits are tracked separately (Jul–Aug: Admin +12.7%, Dock −2.2%). Source: net-amount P&L pivot.
+        Outlook covers the two contract labour buckets (Admin and Dock) plus the confirmed dispatcher saving: each bucket's Jul–Aug % change vs the same months of F26, applied to the remaining F26 months if the rate holds. Estimates, not booked savings. D&R employee wages & benefits (dock and admin) are tracked separately (Jul–Aug: Admin +12.7%, Dock −2.2%). Source: net-amount P&L pivot.
       </Source>
     </Card>
   );
@@ -2073,8 +2033,8 @@ const InitiativesTab = ({ d, x, onSet }) => {
 
   return (
     <>
-      <div className="mb-8 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 p-8 text-white shadow-xl">
-        <p className="text-sm font-semibold uppercase tracking-wider text-purple-200">3 · F27 Savings — outlook and plan</p>
+      <div className="mb-8 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 p-8 text-white shadow-xl">
+        <p className="text-sm font-semibold uppercase tracking-wider text-orange-400">3 · F27 Savings — outlook and plan</p>
         <h2 className="mt-1 text-3xl font-bold">F27 Savings Initiatives</h2>
         <p className="mt-2 text-lg opacity-95">
           {hasIdentified ? <><span className="font-bold text-yellow-300">{money(identified)}</span> identified per year so far</> : 'Initiatives identified'}
@@ -2092,56 +2052,6 @@ const InitiativesTab = ({ d, x, onSet }) => {
 
       <SavingsOutlook d={d} identified={identified} />
 
-      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
-        <Card title={pieData.length < 2 ? "Initiatives by status" : "Savings breakdown"} subtitle={pieData.length < 2 ? `${items.length} tracked; $ values added as they firm up` : "Initiatives with an annual $ value"} icon={BarChart3} className="lg:col-span-2">
-          {pieData.length < 2 ? (
-            <div className="space-y-3">
-              {counts.map((c) => (
-                <div key={c.k} className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
-                  <Chip tone={(STATUS_STYLE[c.k] || STATUS_STYLE.Opportunity).chip}>{c.k}</Chip>
-                  <span className="text-2xl font-bold text-gray-800">{c.n}</span>
-                </div>
-              ))}
-              <p className="text-sm text-gray-700">
-                {pieData.length === 1 ? <><span className="font-semibold">{money(pieData[0].value)}</span> confirmed — {pieData[0].name.toLowerCase()}.</> : 'No $ values confirmed yet.'}
-              </p>
-            </div>
-          ) : pieData.length ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
-                  {pieData.map((e, i) => <Cell key={e.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                </Pie>
-                <Tooltip formatter={(v) => money(v)} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChart height={260} label="Add annual $ values to initiatives" />
-          )}
-          {pieData.length >= 2 && <p className="mt-2 text-xs text-gray-500">Only initiatives with a confirmed annual $ value are in the chart.</p>}
-        </Card>
-        <Card title="September run-rate indicators" subtitle="From the SCA and productivity reports — indicators, not booked savings" icon={Award} className="lg:col-span-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-lg bg-green-50 p-4">
-              <p className="text-xs text-gray-600">Hours under SCA allowance</p>
-              <p className="text-2xl font-bold text-green-700">{isNum(x.hoursUnder) ? `${num(x.hoursUnder)} hrs` : <Tbc small />}</p>
-              <p className="text-xs text-gray-600">{isNum(x.hoursUnderValue) ? `≈${money(x.hoursUnderValue)} MTD` : ''}</p>
-            </div>
-            <div className="rounded-lg bg-green-50 p-4">
-              <p className="text-xs text-gray-600">Cost per unit vs F26</p>
-              <p className="text-2xl font-bold text-green-700">{x.cpuVsLy ? pct(x.cpuVsLy.pct) : <Tbc small />}</p>
-              <p className="text-xs text-gray-600">{isNum(x.cpuSavings) ? `≈${money(x.cpuSavings)} avoided MTD` : ''}</p>
-            </div>
-            <div className="rounded-lg bg-green-50 p-4">
-              <p className="text-xs text-gray-600">Agency share of dock hours</p>
-              <p className="text-2xl font-bold text-green-700">{allNum(d.sca.f27AgencyHours, d.sca.f27Hours) ? pct((d.sca.f27AgencyHours / d.sca.f27Hours) * 100) : <Tbc small />}</p>
-              <p className="text-xs text-gray-600">{allNum(d.sca.f26AgencyHours, d.sca.f26Hours) ? `vs ${pct((d.sca.f26AgencyHours / d.sca.f26Hours) * 100)} in F26 Sept` : ''}</p>
-            </div>
-          </div>
-          <Source>Calculated from the SCA hours, cost-per-PRO and productivity reports (September MTD to Sep 26). Evidence of run-rate — not yet booked as initiative savings.</Source>
-        </Card>
-      </div>
 
       <Card title="Cost reduction initiatives — tracker" subtitle="Pending → Planned → In progress → Confirmed · value and share of identified savings" icon={Target}>
         <StatusSummary items={items} stages={STAGES.savings} doneKeys={['Confirmed']} />
@@ -2315,11 +2225,11 @@ const ScaTab = ({ d, x }) => {
       </div>
 
       <Card title="How we are taking cost out" icon={Zap} className="mb-8">
-        <Bullets items={s.actions} icon={ChevronRight} color="text-purple-600" />
+        <Bullets items={s.actions} icon={ChevronRight} color="text-orange-600" />
       </Card>
 
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <Card title="Dock hours — F26 Sept (full) vs F27 Sept MTD" subtitle="Company vs agency hours · partial-month effect included" icon={Users}>
+        <Card title="Dock hours — F26 Sept (full) vs F27 Sept MTD" subtitle="D&R vs agency hours · partial-month effect included" icon={Users}>
           {hoursReady ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={hoursData} layout="vertical" margin={{ top: 10, right: 30, bottom: 0, left: 10 }}>
@@ -2328,8 +2238,8 @@ const ScaTab = ({ d, x }) => {
                 <YAxis type="category" dataKey="period" tick={{ fontSize: 12, fontWeight: 600 }} width={100} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${num(v)} hrs`} />
                 <Legend />
-                <Bar dataKey="Company" stackId="a" fill="#7c3aed" />
-                <Bar dataKey="Agency" stackId="a" fill="#06b6d4" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="Company" stackId="a" fill="#ea580c" />
+                <Bar dataKey="Agency" stackId="a" fill="#475569" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -2351,7 +2261,7 @@ const ScaTab = ({ d, x }) => {
           <Source>{periodNote}.</Source>
         </Card>
 
-        <Card title="Dock labour cost — F26 Sept (full) vs F27 Sept MTD" subtitle="Company vs agency wages · partial-month effect included" icon={DollarSign}>
+        <Card title="Dock labour cost — F26 Sept (full) vs F27 Sept MTD" subtitle="D&R vs agency wages · partial-month effect included" icon={DollarSign}>
           {labourReady ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={labourData} layout="vertical" margin={{ top: 10, right: 30, bottom: 0, left: 10 }}>
@@ -2360,8 +2270,8 @@ const ScaTab = ({ d, x }) => {
                 <YAxis type="category" dataKey="period" tick={{ fontSize: 12, fontWeight: 600 }} width={100} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(v)} />
                 <Legend />
-                <Bar dataKey="Company" stackId="a" fill="#7c3aed" />
-                <Bar dataKey="Agency" stackId="a" fill="#06b6d4" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="Company" stackId="a" fill="#ea580c" />
+                <Bar dataKey="Agency" stackId="a" fill="#475569" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -2419,13 +2329,13 @@ const ScaTab = ({ d, x }) => {
                         <span>{ok ? `${pct(share, 1)} agency · ${num(m.agency / m.dr, 2)} agency hrs per D&R hr` : 'TBC'}</span>
                       </div>
                       <div className="mt-1 flex h-3 overflow-hidden rounded-full bg-gray-100">
-                        {ok && <div className="bg-cyan-500" style={{ width: `${share}%` }} />}
-                        {ok && <div className="bg-purple-600" style={{ width: `${100 - share}%` }} />}
+                        {ok && <div className="bg-slate-500" style={{ width: `${share}%` }} />}
+                        {ok && <div className="bg-orange-600" style={{ width: `${100 - share}%` }} />}
                       </div>
                     </div>
                   );
                 })}
-                <p className="text-xs text-gray-500"><span className="text-cyan-600">■</span> Agency <span className="ml-2 text-purple-600">■</span> D&R · ratios calculated from the SCA hours report.</p>
+                <p className="text-xs text-gray-500"><span className="text-slate-600">■</span> Agency <span className="ml-2 text-orange-600">■</span> D&R · ratios calculated from the SCA hours report.</p>
               </div>
             );
           })()}
@@ -2514,8 +2424,8 @@ const ShiftCard = ({ s }) => {
                     <td className="py-2 pr-2 text-right">{r.agencyDock} / {r.drDock}</td>
                     <td className="py-2 pr-2 text-right">
                       <div className="ml-auto flex h-2.5 w-20 overflow-hidden rounded-full bg-gray-100">
-                        <div className="bg-cyan-500" style={{ width: `${share}%` }} />
-                        <div className="bg-purple-600" style={{ width: `${100 - share}%` }} />
+                        <div className="bg-slate-500" style={{ width: `${share}%` }} />
+                        <div className="bg-orange-600" style={{ width: `${100 - share}%` }} />
                       </div>
                       <span className="text-xs text-gray-600">{pct(share, 0)} / {pct(100 - share, 0)}</span>
                     </td>
@@ -2527,7 +2437,7 @@ const ShiftCard = ({ s }) => {
               })}
             </tbody>
           </table>
-          <p className="mt-2 text-xs text-gray-500"><span className="text-cyan-600">■</span> Agency <span className="ml-2 text-purple-600">■</span> D&R. Admin ratio: {ratio(tot('agencyAdmin'), tot('drAdmin'))} ({tot('agencyAdmin')} agency / {tot('drAdmin')} D&R).</p>
+          <p className="mt-2 text-xs text-gray-500"><span className="text-slate-600">■</span> Agency <span className="ml-2 text-orange-600">■</span> D&R. Admin ratio: {ratio(tot('agencyAdmin'), tot('drAdmin'))} ({tot('agencyAdmin')} agency / {tot('drAdmin')} D&R).</p>
           <p className="mt-2 text-xs text-gray-500">People who worked that day. Not Day & Ross = agency. Dock / admin by department; admin includes dispatch.</p>
         </div>
       </div>
@@ -2545,7 +2455,7 @@ const ProductivityTab = ({ d, x }) => {
   const c = d.cico;
   const pphData = [
     { name: 'F26', value: p26.pph, fill: '#9ca3af' },
-    { name: 'F27', value: p27.pph, fill: '#7c3aed' },
+    { name: 'F27', value: p27.pph, fill: '#ea580c' },
     { name: 'F27 goal', value: p27.pphGoal, fill: '#d1d5db' },
   ].filter((r) => isNum(r.value));
   const uphData = [
@@ -2681,7 +2591,7 @@ const ProductivityTab = ({ d, x }) => {
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${num(v, 1)} hrs`} />
-                <Bar dataKey="hoursSaved" name="Hours saved" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="hoursSaved" name="Hours saved" fill="#ea580c" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -2819,10 +2729,10 @@ const LoadQualityCard = ({ d }) => {
                       <img src={pr.img} alt={pr.name} className="h-44 w-full object-contain" loading="lazy" />
                     </button>
                   ) : (
-                    <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-700"><Icon className="h-5 w-5" /></span>
+                    <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-orange-700"><Icon className="h-5 w-5" /></span>
                   )}
                   <p className="font-bold text-gray-900">{pr.name}</p>
-                  <p className="mt-1 text-sm text-gray-700"><span className="font-semibold text-purple-700">For: </span>{pr.use}</p>
+                  <p className="mt-1 text-sm text-gray-700"><span className="font-semibold text-orange-700">For: </span>{pr.use}</p>
                   <p className="mt-1 text-sm text-gray-600"><span className="font-semibold text-gray-700">How it helps: </span>{pr.how}</p>
                 </div>
               );
@@ -2831,14 +2741,14 @@ const LoadQualityCard = ({ d }) => {
         </div>
       )}
       {lq.collapsible && (
-        <div className="mt-6 rounded-lg border border-purple-200 bg-purple-50 p-4">
-          <p className="text-sm font-semibold text-purple-900">Collapsible load tables — for us and the terminals that unload our trailers</p>
-          <p className="mt-1 text-sm text-purple-900">{lq.collapsible.problem}</p>
+        <div className="mt-6 rounded-lg border border-orange-200 bg-orange-50 p-4">
+          <p className="text-sm font-semibold text-orange-900">Collapsible load tables — for us and the terminals that unload our trailers</p>
+          <p className="mt-1 text-sm text-orange-900">{lq.collapsible.problem}</p>
           <div className="mt-3 grid grid-cols-3 gap-3">
             {lq.collapsible.photos.map((ph) => <Photo key={ph.img} ph={ph} h="h-64" onZoom={setZoom} />)}
           </div>
           <div className="mt-3 text-sm">
-            <Bullets items={lq.collapsible.points} icon={ChevronRight} color="text-purple-600" />
+            <Bullets items={lq.collapsible.points} icon={ChevronRight} color="text-orange-600" />
           </div>
         </div>
       )}
@@ -2872,7 +2782,7 @@ const TerminalTab = ({ d }) => {
       <LoadQualityCard d={d} />
       <Card title="Terminal relocation" icon={Home}>
         <div className="flex items-start gap-4">
-          <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
+          <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
             <Truck className="h-6 w-6" />
           </span>
           <div>
@@ -2953,7 +2863,7 @@ const Field = ({ field, value, onChange }) => {
             onChange(field.path, raw);
           }
         }}
-        className={`mt-1 w-full rounded-md border px-2 py-1.5 text-sm outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 ${
+        className={`mt-1 w-full rounded-md border px-2 py-1.5 text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 ${
           empty && field.type === 'number' ? 'border-amber-300 bg-amber-50' : 'border-gray-300'
         }`}
       />
@@ -2980,7 +2890,7 @@ const EditPanel = ({ data, onChange, onReset, onClose, missing }) => {
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-bold text-gray-800">
-              <Pencil className="h-5 w-5 text-purple-600" /> Edit data
+              <Pencil className="h-5 w-5 text-orange-600" /> Edit data
             </h2>
             <p className="text-xs text-gray-500">Saves in this browser as you type · {missing} values still TBC</p>
           </div>
@@ -3003,7 +2913,7 @@ const EditPanel = ({ data, onChange, onReset, onClose, missing }) => {
           ))}
         </div>
         <div className="flex gap-2 border-t border-gray-200 px-5 py-4">
-          <button onClick={copy} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-sm font-medium text-white hover:bg-purple-700">
+          <button onClick={copy} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700">
             <Copy className="h-4 w-4" /> {copied ? 'Copied!' : 'Copy for data.js'}
           </button>
           <button
@@ -3074,11 +2984,15 @@ const App = () => {
       <div className="sticky top-0 z-30 border-b border-gray-200 bg-white shadow-lg">
         <div className="mx-auto max-w-7xl px-6">
           <div className="flex h-16 items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold text-gray-800">{data.meta.terminal} Terminal</h1>
+            <div className="flex min-w-0 items-center gap-3">
+              <img src="/img/dr-logo.png" alt="Day & Ross" className="h-10 w-auto flex-shrink-0" />
+              <span className="h-8 w-px bg-gray-200" />
+              <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold tracking-tight text-gray-900">{data.meta.terminal} Terminal</h1>
               <p className="truncate text-xs text-gray-500">
                 {data.meta.fiscalYear} Leadership Review · {data.meta.presentationDate}
               </p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => step(-1)} className="hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 sm:block" aria-label="Previous section">
@@ -3096,7 +3010,7 @@ const App = () => {
               </a>
               <button
                 onClick={() => setEditing(true)}
-                className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-purple-700"
+                className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-orange-700"
               >
                 <Pencil className="h-4 w-4" /> Edit data
               </button>
@@ -3108,7 +3022,7 @@ const App = () => {
                 key={t.id}
                 onClick={() => go(t.id)}
                 className={`flex flex-shrink-0 items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${
-                  tab === t.id ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+                  tab === t.id ? 'border-orange-600 bg-orange-50 text-orange-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                 }`}
               >
                 <t.icon className="h-4 w-4" />
