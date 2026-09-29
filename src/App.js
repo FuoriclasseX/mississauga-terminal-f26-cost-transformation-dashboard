@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  PieChart, Pie, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  PieChart, Pie, BarChart, Bar, LineChart, Line, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine, ReferenceArea, Cell, LabelList
 } from 'recharts';
 import {
@@ -58,7 +58,7 @@ const num = (v, d = 0) =>
   `${v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('en-CA', { minimumFractionDigits: d, maximumFractionDigits: d })}`;
 const pct = (v, d = 1) => `${v < 0 ? '−' : ''}${Math.abs(v).toFixed(d)}%`;
 const signed = (v, fmt) => (v > 0 ? `+${fmt(v)}` : fmt(v));
-const kMoney = (v) => (Math.abs(v) >= 1e6 ? `$${(v / 1e6).toFixed(2)}M` : `$${(v / 1000).toFixed(1)}K`);
+const kMoney = (v) => `${v < 0 ? '−' : ''}${Math.abs(v) >= 1e6 ? `$${(Math.abs(v) / 1e6).toFixed(2)}M` : `$${(Math.abs(v) / 1000).toFixed(1)}K`}`;
 
 // Fiscal-year progress (F27 = Jul 1, 2026 – Jun 30, 2027)
 const fiscalProgress = () => {
@@ -310,6 +310,7 @@ const TABS = [
   { id: 'safety', label: 'Safety', icon: Shield },
   { id: 'service', label: 'Service', icon: Clock },
   { id: 'sca', label: 'SCA & Savings', icon: DollarSign },
+  { id: 'spend', label: 'Cost & Volume', icon: BarChart3 },
   { id: 'productivity', label: 'Productivity', icon: Gauge },
   { id: 'initiatives', label: 'F27 Initiatives', icon: Target },
   { id: 'terminal', label: 'Terminal', icon: Wrench },
@@ -325,6 +326,7 @@ const OverviewTab = ({ d, x, go }) => {
     { id: 'safety', icon: Shield, title: 'Safety', text: 'Current TRIR, what we do every shift, and what we are adding in F27.' },
     { id: 'service', icon: Clock, title: 'Service', text: 'On-time service incl./excl. partner carriers, missed pickups and scanning.' },
     { id: 'sca', icon: DollarSign, title: 'SCA & Savings', text: 'Hours vs allowance, cost per PRO, labour cost and the F27 take-out plan.' },
+    { id: 'spend', icon: BarChart3, title: 'Cost & Volume', text: 'Terminal cost Jul 2025 → Aug 2026 against PROs and weight; cost per PRO.' },
     { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, P&D measures, load factor and CICO.' },
     { id: 'terminal', icon: Wrench, title: 'Physical Terminal', text: 'Relocation to a new building planned before 2027.' },
   ];
@@ -1383,6 +1385,230 @@ const STATUS_STYLE = {
 };
 const PIE_COLORS = ['#7c3aed', '#06b6d4', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#6366f1'];
 
+const DEPT_COLORS = { admin: '#7c3aed', dock: '#06b6d4', pd: '#f59e0b' };
+
+const SpendTab = ({ d }) => {
+  const s = d.spend;
+  const rows = s.months.map((m) => {
+    const cwtBase = m.lbs / 100;
+    return {
+      ...m,
+      cpp: m.total / m.pros,
+      cwt: m.total / cwtBase,
+      adminK: m.admin / 1000,
+      dockK: m.dock / 1000,
+      pdK: m.pd / 1000,
+      lbsM: m.lbs / 1e6,
+    };
+  });
+  const f27 = rows.filter((r) => r.fy === 'F27');
+  const ly = f27.map((r) => rows.find((q) => q.fy === 'F26' && q.label.slice(0, 3) === r.label.slice(0, 3))).filter(Boolean);
+  const agg = (list) => {
+    const t = (k) => sum(list.map((r) => r[k]));
+    return { admin: t('admin'), dock: t('dock'), pd: t('pd'), total: t('total'), pros: t('pros'), lbs: t('lbs') };
+  };
+  const a27 = agg(f27);
+  const a26 = agg(ly);
+  const chg = (a, b) => (b ? ((a - b) / b) * 100 : null);
+  const perPro = (a, k) => a[k] / a.pros;
+  const perCwt = (a, k) => a[k] / (a.lbs / 100);
+  const period = `${f27.map((r) => r.label.slice(0, 3)).join('–')}`;
+  const firstF27 = f27.length ? f27[0].label : null;
+  const lastLabel = rows[rows.length - 1].label;
+
+  // Cost % of revenue: F25 history + months where the revenue allocation is still valid
+  const validIdx = rows.findIndex((r) => r.label === s.revenueValidThrough);
+  const ratioRows = [
+    ...s.priorRatio.map((r) => ({ label: r.label, ratio: r.ratio })),
+    ...rows.map((r, i) => ({ label: r.label, ratio: i <= validIdx && r.revenue > 0 ? (r.total / r.revenue) * 100 : null })),
+  ];
+  const firstInvalid = rows[validIdx + 1] ? rows[validIdx + 1].label : null;
+  const validF26 = rows.filter((r, i) => i <= validIdx && r.fy === 'F26');
+  const validF26Ratio = (sum(validF26.map((r) => r.total)) / sum(validF26.map((r) => r.revenue))) * 100;
+  const f25Ratio = s.priorRatio.slice(0, validF26.length);
+  const f25SameMonths = sum(f25Ratio.map((r) => r.ratio)) / f25Ratio.length;
+
+  const depts = [
+    { k: 'admin', name: 'Terminal Admin (incl. claims)' },
+    { k: 'dock', name: 'Dock' },
+    { k: 'pd', name: 'P&D (incl. fuel subsidy)' },
+    { k: 'total', name: 'Total terminal', bold: true },
+  ];
+  const drivers = s.drivers.map((r) => ({ ...r, delta: r.f27 - r.f26 })).sort((p, q) => p.delta - q.delta);
+  const terminalNet = sum(drivers.filter((r) => r.type === 'Terminal').map((r) => r.delta));
+  const maxAbs = Math.max(...drivers.map((r) => Math.abs(r.delta)));
+  const TYPE_TONE = { Terminal: 'purple', 'P&D mix': 'amber', Fixed: 'gray' };
+  const cellTone = (v) => (v <= 0 ? 'text-green-700' : 'text-red-600');
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Terminal P&L · Past to now"
+        title="Cost & Volume"
+        icon={BarChart3}
+        subtitle={`Terminal cost tracked against freight bills (PROs) and weight, ${rows[0].label.replace(' ', ' 20')} → ${lastLabel.replace(' ', ' 20')}. F27 started July; ${period} compared with the same months last year.`}
+      />
+
+      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <Kpi icon={DollarSign} tone="purple" label={`Total terminal cost · F27 ${period}`} value={kMoney(a27.total)}
+          sub={`vs ${kMoney(a26.total)} same months F26`}
+          footer={<Delta d={{ abs: a27.total - a26.total, pct: chg(a27.total, a26.total) }} goodWhen="down" fmtAbs={kMoney} />} />
+        <Kpi icon={Package} tone="blue" label="Freight bills (PROs in + out)" value={num(a27.pros)}
+          sub={`vs ${num(a26.pros)} · weight ${(a27.lbs / 1e6).toFixed(1)}M vs ${(a26.lbs / 1e6).toFixed(1)}M lbs`}
+          footer={<Delta d={{ abs: a27.pros - a26.pros, pct: chg(a27.pros, a26.pros) }} goodWhen="up" fmtAbs={num} />} />
+        <Kpi icon={Target} tone="green" label="Total cost per PRO" value={money(perPro(a27, 'total'), 2)}
+          sub={`vs ${money(perPro(a26, 'total'), 2)} — cost fell faster than volume`}
+          footer={<Delta d={{ abs: perPro(a27, 'total') - perPro(a26, 'total'), pct: chg(perPro(a27, 'total'), perPro(a26, 'total')) }} goodWhen="down" fmtAbs={(v) => money(v, 2)} />} />
+        <Kpi icon={Gauge} tone="amber" label="Total cost per CWT" value={money(perCwt(a27, 'total'), 2)}
+          sub={`vs ${money(perCwt(a26, 'total'), 2)} · per 100 lbs handled`}
+          footer={<Delta d={{ abs: perCwt(a27, 'total') - perCwt(a26, 'total'), pct: chg(perCwt(a27, 'total'), perCwt(a26, 'total')) }} goodWhen="down" fmtAbs={(v) => money(v, 2)} />} />
+      </div>
+
+      <Card title="Monthly cost by department and cost per PRO" subtitle={`${rows[0].label} → ${lastLabel} · bars = cost ($K) · line = total cost per PRO`} icon={BarChart3} className="mb-8">
+        <ResponsiveContainer width="100%" height={340}>
+          <ComposedChart data={rows} margin={{ top: 24, right: 10, bottom: 0, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            {firstF27 && <ReferenceArea yAxisId="k" x1={firstF27} x2={lastLabel} fill="#7c3aed" fillOpacity={0.07} label={{ value: 'F27', position: 'insideTop', fill: '#7c3aed', fontSize: 12, fontWeight: 700 }} />}
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+            <YAxis yAxisId="k" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}K`} />
+            <YAxis yAxisId="p" orientation="right" domain={[20, 50]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => (n === 'Cost per PRO' ? money(v, 2) : `$${num(v, 1)}K`)} />
+            <Legend />
+            <Bar yAxisId="k" dataKey="adminK" name="Terminal Admin" stackId="c" fill={DEPT_COLORS.admin} />
+            <Bar yAxisId="k" dataKey="dockK" name="Dock" stackId="c" fill={DEPT_COLORS.dock} />
+            <Bar yAxisId="k" dataKey="pdK" name="P&D" stackId="c" fill={DEPT_COLORS.pd} radius={[3, 3, 0, 0]} />
+            <Line yAxisId="p" type="monotone" dataKey="cpp" name="Cost per PRO" stroke="#111827" strokeWidth={3} dot={{ r: 4 }}>
+              <LabelList dataKey="cpp" position="top" formatter={(v) => `$${v.toFixed(0)}`} style={{ fontSize: 10, fill: '#111827', fontWeight: 600 }} />
+            </Line>
+          </ComposedChart>
+        </ResponsiveContainer>
+        <p className="mt-2 text-sm text-gray-600">
+          Cost per PRO peaked at {money(Math.max(...rows.map((r) => r.cpp)), 2)} ({rows.reduce((m, r) => (r.cpp > m.cpp ? r : m)).label}) and has run in the ${Math.min(...rows.slice(-6).map((r) => r.cpp)).toFixed(0)}–${Math.max(...rows.slice(-6).map((r) => r.cpp)).toFixed(0)} range for the last six months.
+        </p>
+      </Card>
+
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <Card title="Volume — PROs and weight" subtitle="Bars = PROs in + out · line = LTL PRO weight (M lbs)" icon={Package}>
+          <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={rows} margin={{ top: 20, right: 0, bottom: 0, left: -10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              {firstF27 && <ReferenceArea yAxisId="n" x1={firstF27} x2={lastLabel} fill="#7c3aed" fillOpacity={0.07} />}
+              <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+              <YAxis yAxisId="n" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v / 1000}K`} />
+              <YAxis yAxisId="w" orientation="right" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}M`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => (n === 'PROs' ? num(v) : `${num(v, 2)}M lbs`)} />
+              <Legend />
+              <Bar yAxisId="n" dataKey="pros" name="PROs" fill="#93c5fd" radius={[3, 3, 0, 0]} />
+              <Line yAxisId="w" type="monotone" dataKey="lbsM" name="LTL weight" stroke="#1d4ed8" strokeWidth={3} dot={{ r: 3 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+          <Source>Weight excludes the transfer weight credits added from Mar 2026, so months compare like-for-like.</Source>
+        </Card>
+
+        <Card title="Cost per PRO by department" subtitle={`F27 ${period} vs same months F26`} icon={Target}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-gray-200 text-left text-gray-500">
+                  <th className="py-2 pr-2 font-semibold" />
+                  <th className="py-2 pr-2 text-right font-semibold">Cost F26 → F27</th>
+                  <th className="py-2 text-right font-semibold">Cost per PRO</th>
+                </tr>
+              </thead>
+              <tbody>
+                {depts.map((r) => {
+                  const c = chg(a27[r.k], a26[r.k]);
+                  const pp = chg(perPro(a27, r.k), perPro(a26, r.k));
+                  return (
+                    <tr key={r.k} className={`border-b border-gray-100 ${r.bold ? 'bg-gray-50 font-semibold' : ''}`}>
+                      <td className="py-2 pr-2 text-gray-800">
+                        {!r.bold && <span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: DEPT_COLORS[r.k] }} />}
+                        {r.name}
+                      </td>
+                      <td className="py-2 pr-2 text-right">
+                        {kMoney(a26[r.k])} → {kMoney(a27[r.k])}
+                        <div className={`text-xs font-semibold ${cellTone(c)}`}>{signed(c, (v) => pct(v))}</div>
+                      </td>
+                      <td className="py-2 text-right">
+                        {money(perPro(a26, r.k), 2)} → {money(perPro(a27, r.k), 2)}
+                        <div className={`text-xs font-semibold ${cellTone(pp)}`}>{signed(pp, (v) => pct(v))}</div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <Source>PROs = PRO count in + out. Calculated from the Terminal Analysis.</Source>
+        </Card>
+      </div>
+
+      <Card title="What moved — largest line changes" subtitle={`F27 ${period} vs same months F26 · green = lower cost`} icon={Activity} className="mb-8">
+        <div className="space-y-2">
+          {drivers.map((r) => (
+            <div key={r.line} className="grid grid-cols-12 items-center gap-3 text-sm">
+              <div className="col-span-12 flex items-center gap-2 md:col-span-4">
+                <Chip tone={TYPE_TONE[r.type]}>{r.type}</Chip>
+                <span className="text-gray-800">{r.line}</span>
+              </div>
+              <div className="col-span-8 md:col-span-6">
+                <div className="flex h-5 w-full">
+                  <div className="flex w-1/2 justify-end">
+                    {r.delta < 0 && <div className="h-5 rounded-l bg-green-500" style={{ width: `${(Math.abs(r.delta) / maxAbs) * 100}%`, minWidth: 3 }} />}
+                  </div>
+                  <div className="w-px bg-gray-400" />
+                  <div className="flex w-1/2">
+                    {r.delta > 0 && <div className="h-5 rounded-r bg-red-400" style={{ width: `${(r.delta / maxAbs) * 100}%`, minWidth: 3 }} />}
+                  </div>
+                </div>
+              </div>
+              <div className={`col-span-4 text-right font-semibold md:col-span-2 ${cellTone(r.delta)}`}>{signed(r.delta, kMoney)}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="rounded-lg bg-purple-50 p-4 text-sm text-purple-900">
+            <p className="font-semibold">Terminal-controlled lines: net {signed(terminalNet, kMoney)} in two months</p>
+            <p className="mt-1">Agency labour down in Admin and on the dock, repairs and rentals down ahead of the building move, dock owner-operator cost gone. Offsets: cargo claims and company wages.</p>
+          </div>
+          <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-semibold">P&D mix — not claimed as terminal savings</p>
+            <p className="mt-1">Agent drivers were replaced by owner operators (agent cost down, owner-operator base and accessorials up) and the fuel subsidy dropped. It lowers the P&L, but it is a network P&D change.</p>
+          </div>
+        </div>
+        <Source>Source: net-amount pivot by department and Terminal Analysis, Aug 2026. Property tax shown as fixed.</Source>
+      </Card>
+
+      <Card title="Cost % of revenue — valid through Feb 2026" subtitle={`The F26 dashboard's cost-to-revenue model, carried forward · ${ratioRows[0].label} → ${lastLabel}`} icon={TrendingDown} className="mb-8">
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={ratioRows} margin={{ top: 24, right: 20, bottom: 0, left: -10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            {firstInvalid && (
+              <ReferenceArea x1={firstInvalid} x2={lastLabel} fill="#9ca3af" fillOpacity={0.18}
+                label={{ value: 'Revenue not valid after Feb 26', position: 'insideTop', fill: '#4b5563', fontSize: 12, fontWeight: 600 }} />
+            )}
+            <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={50} />
+            <YAxis domain={[40, 80]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v) => (isNum(v) ? pct(v) : 'not valid')} />
+            <Line type="monotone" dataKey="ratio" name="Cost % of revenue" stroke="#7c3aed" strokeWidth={3} dot={{ r: 3 }} connectNulls={false}>
+              <LabelList dataKey="ratio" position="top" formatter={(v) => (isNum(v) ? v.toFixed(0) : '')} style={{ fontSize: 9, fill: '#6d28d9' }} />
+            </Line>
+          </LineChart>
+        </ResponsiveContainer>
+        <div className="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <p className="text-sm text-gray-600">
+            Last valid comparison: F26 {validF26[0].label}–{validF26[validF26.length - 1].label} ran at <span className="font-semibold">{pct(validF26Ratio)}</span> vs {pct(f25SameMonths)} for the same months of F25 (simple average).
+          </p>
+          <p className="text-sm text-gray-600">
+            From {firstInvalid} the terminal is credited almost no revenue (≈$21–36K a month vs $1.6–3.0M before), so the ratio reads in the thousands of percent. Until that is fixed, cost is tracked per PRO and per CWT above.
+          </p>
+        </div>
+        <Source>F25 months from the F26 cost-transformation dashboard; F26 months calculated from the Terminal Analysis (total terminal cost ÷ gross revenue).</Source>
+      </Card>
+    </>
+  );
+};
+
 const InitiativesTab = ({ d, x }) => {
   const items = d.initiatives.filter((i) => i.name);
   const target = d.sca.f27SavingsTarget;
@@ -2380,6 +2606,7 @@ const App = () => {
         {tab === 'safety' && <SafetyTab d={data} x={x} />}
         {tab === 'service' && <ServiceTab d={data} x={x} />}
         {tab === 'sca' && <ScaTab d={data} x={x} />}
+        {tab === 'spend' && <SpendTab d={data} />}
         {tab === 'productivity' && <ProductivityTab d={data} x={x} />}
         {tab === 'initiatives' && <InitiativesTab d={data} x={x} />}
         {tab === 'terminal' && <TerminalTab d={data} x={x} />}

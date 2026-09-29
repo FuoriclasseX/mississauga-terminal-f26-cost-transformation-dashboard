@@ -403,6 +403,52 @@ export const DEFAULT_DATA = {
   //   PPH = weight / hours · Units/hr = units / hours · $/hr = costs / hours
   //   CWT = costs / (weight / 100) · CPU = costs / units
   // --------------------------------------------------------------------------
+  spend: {
+    source: 'Terminal Analysis (Aug 2026) and net-amount pivot by department — Mississauga 1514',
+    period: 'F27 YTD = Jul–Aug 2026 vs same months F26 (Jul–Aug 2025)',
+    // Monthly P&L. admin incl. Accidents & Damages; pd incl. fuel subsidy and TL. pros = PRO count in + out (LTL + TL).
+    // lbs = LTL PRO weight in + out, excl. transfer weight credits (credits added to shipped weight from Mar 2026).
+    months: [
+      { label: 'Jul 25', fy: 'F26', admin: 404948, dock: 344250, pd: 934448, total: 1683646, pros: 42253, lbs: 12035180, xferLbs: null, revenue: 3011897 },
+      { label: 'Aug 25', fy: 'F26', admin: 366709, dock: 343455, pd: 860325, total: 1570489, pros: 35096, lbs: 10461184, xferLbs: null, revenue: 2357788 },
+      { label: 'Sep 25', fy: 'F26', admin: 359887, dock: 300474, pd: 677415, total: 1337777, pros: 35611, lbs: 10296765, xferLbs: null, revenue: 2396899 },
+      { label: 'Oct 25', fy: 'F26', admin: 353504, dock: 312285, pd: 732174, total: 1397963, pros: 34980, lbs: 10506168, xferLbs: null, revenue: 2382063 },
+      { label: 'Nov 25', fy: 'F26', admin: 336971, dock: 285101, pd: 757672, total: 1379744, pros: 35686, lbs: 9220554, xferLbs: null, revenue: 2284738 },
+      { label: 'Dec 25', fy: 'F26', admin: 351869, dock: 297280, pd: 631732, total: 1280881, pros: 32768, lbs: 7922310, xferLbs: null, revenue: 2037918 },
+      { label: 'Jan 26', fy: 'F26', admin: 338760, dock: 280044, pd: 575791, total: 1194595, pros: 28426, lbs: 7374565, xferLbs: null, revenue: 1729661 },
+      { label: 'Feb 26', fy: 'F26', admin: 285408, dock: 212451, pd: 429431, total: 927290, pros: 24040, lbs: 6942234, xferLbs: null, revenue: 1618171 },
+      { label: 'Mar 26', fy: 'F26', admin: 319908, dock: 297461, pd: 550893, total: 1168261, pros: 35457, lbs: 6858984, xferLbs: 2002743, revenue: -5347 },
+      { label: 'Apr 26', fy: 'F26', admin: 333624, dock: 304078, pd: 672564, total: 1310267, pros: 42906, lbs: 11205341, xferLbs: 4429928, revenue: 21189 },
+      { label: 'May 26', fy: 'F26', admin: 338450, dock: 272374, pd: 653371, total: 1264195, pros: 48409, lbs: 12786872, xferLbs: 3871203, revenue: 35873 },
+      { label: 'Jun 26', fy: 'F26', admin: 382078, dock: 410023, pd: 704605, total: 1496706, pros: 42956, lbs: 12421602, xferLbs: 3885371, revenue: 26162 },
+      { label: 'Jul 26', fy: 'F27', admin: 369345, dock: 324421, pd: 692345, total: 1386110, pros: 38409, lbs: 10970615, xferLbs: 4214283, revenue: 34308 },
+      { label: 'Aug 26', fy: 'F27', admin: 339960, dock: 271401, pd: 567934, total: 1179295, pros: 32983, lbs: 9148530, xferLbs: 3521113, revenue: 23009 },
+    ],
+    // Cost % of revenue before the break — F25 months from the F26 cost-transformation dashboard (Terminal Analysis)
+    priorRatio: [
+      { label: 'Jul 24', ratio: 58.82 }, { label: 'Aug 24', ratio: 58.29 }, { label: 'Sep 24', ratio: 62.84 },
+      { label: 'Oct 24', ratio: 60.02 }, { label: 'Nov 24', ratio: 76.12 }, { label: 'Dec 24', ratio: 74.98 },
+      { label: 'Jan 25', ratio: 73.83 }, { label: 'Feb 25', ratio: 60.79 }, { label: 'Mar 25', ratio: 53.1 },
+      { label: 'Apr 25', ratio: 54.55 }, { label: 'May 25', ratio: 55.3 }, { label: 'Jun 25', ratio: 55.78 },
+    ],
+    revenueValidThrough: 'Feb 26',
+    // Largest line changes, F27 Jul–Aug vs F26 Jul–Aug
+    drivers: [
+      { line: 'Agent driver cost (P&D)', f26: 645928, f27: 23067, type: 'P&D mix' },
+      { line: 'Terminal fuel subsidy', f26: 127325, f27: 10508, type: 'P&D mix' },
+      { line: 'Owner operator base (P&D)', f26: 746182, f27: 840592, type: 'P&D mix' },
+      { line: 'Owner operator accessorial (P&D)', f26: 204620, f27: 307673, type: 'P&D mix' },
+      { line: 'Agency labour — Terminal Admin', f26: 244520, f27: 182708, type: 'Terminal' },
+      { line: 'Agency labour — dock', f26: 328741, f27: 310298, type: 'Terminal' },
+      { line: 'Repairs & maintenance (dock + building)', f26: 100841, f27: 55386, type: 'Terminal' },
+      { line: 'Owner operator base (dock)', f26: 30231, f27: 798, type: 'Terminal' },
+      { line: 'Rentals (dock + building)', f26: 32709, f27: 1029, type: 'Terminal' },
+      { line: 'Company wages, salaries & benefits', f26: 356556, f27: 365089, type: 'Terminal' },
+      { line: 'Cargo claims', f26: 24024, f27: 39087, type: 'Terminal' },
+      { line: 'Property tax', f26: 41578, f27: 55550, type: 'Fixed' },
+    ],
+  },
+
   productivity: {
     updatedFor: 'Sat, Sep 26, 2026',
     period: 'September MTD',
