@@ -168,7 +168,8 @@ export const DEFAULT_DATA = {
     cdMtd: 26,
     // National SCA Cost-per-PRO report (Sep 26) — Mississauga row
     costPerProMtd: 6.6,
-    costPerProTarget: 6.85,      // report shows 96.3% of target (amber / watch)
+    costPerProTarget: 6.85,
+    costPerProPctOfTarget: 96.3, // as published in the report (amber / watch)
     fbCountMtd: 26053,           // FB count (IN + OUT, CY MTD)
     monthlyDockSb: 44053,        // monthly dock S&B (input)
     proratedSbMtd: 38179.09,     // prorated S&B (MTD)
@@ -383,6 +384,7 @@ export const EDIT_SECTIONS = [
       f('sca.wdMonth', 'Working days in month'),
       f('sca.costPerProMtd', 'Cost per PRO MTD ($)'),
       f('sca.costPerProTarget', 'Cost per PRO target ($)'),
+      f('sca.costPerProPctOfTarget', 'Cost per PRO % of target'),
       f('sca.fbCountMtd', 'FB count MTD'),
       f('sca.f27Hours', 'F27 total hours'),
       f('sca.f27CompanyHours', 'F27 company hours'),

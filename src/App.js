@@ -84,7 +84,9 @@ const derive = (d) => {
   }));
 
   const s = d.sca;
-  const cppPctOfTarget = allNum(s.costPerProMtd, s.costPerProTarget) ? (s.costPerProMtd / s.costPerProTarget) * 100 : null;
+  const cppPctOfTarget = isNum(s.costPerProPctOfTarget)
+    ? s.costPerProPctOfTarget
+    : allNum(s.costPerProMtd, s.costPerProTarget) ? (s.costPerProMtd / s.costPerProTarget) * 100 : null;
   const cppUnder = allNum(s.costPerProMtd, s.costPerProTarget) ? s.costPerProTarget - s.costPerProMtd : null;
   // Report colour bands: ≤95% green · 95–100% amber (watch) · >100% red
   const cppTone = !isNum(cppPctOfTarget) ? 'gray' : cppPctOfTarget <= 95 ? 'green' : cppPctOfTarget <= 100 ? 'amber' : 'red';
@@ -311,9 +313,9 @@ const OverviewTab = ({ d, x, go }) => {
   const p27 = d.productivity.f27;
   const agenda = [
     { id: 'safety', icon: Shield, title: 'Safety', text: 'Current TRIR, what we do every shift, and what we are adding in F27.' },
-    { id: 'service', icon: Clock, title: 'Service', text: 'OTS and late codes, plus scanning compliance by trip type.' },
-    { id: 'sca', icon: DollarSign, title: 'SCA & Savings', text: 'Cost per PRO vs target and the F27 cost take-out plan.' },
-    { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, load factor and CICO hours saved.' },
+    { id: 'service', icon: Clock, title: 'Service', text: 'Missed pickups, OTS and late codes, and scanning compliance.' },
+    { id: 'sca', icon: DollarSign, title: 'SCA & Savings', text: 'Hours vs allowance, cost per PRO, labour cost and the F27 take-out plan.' },
+    { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, cost per hour, load factor and CICO.' },
     { id: 'terminal', icon: Wrench, title: 'Physical Terminal', text: 'Condition of the building and urgent repairs.' },
   ];
   return (
@@ -530,9 +532,10 @@ const ServiceTab = ({ d, x }) => {
       <PageHeader
         eyebrow="2 · Service"
         icon={Clock}
-        title="OTS — On-Time Service"
-        subtitle="Current OTS, what is driving the lates, and the plan to improve in F27."
+        title="Service — Missed Pickups, OTS & Scanning"
+        subtitle="Current service levels, what is driving the misses and lates, and the plan to improve in F27."
       />
+      <MissedPuCard m={d.missedPu} />
       <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-5">
         <Kpi icon={Package} tone="gray" label={`Total FB's · ${o.period}`} value={<V v={o.totalFbs} fmt={num} />} />
         <Kpi icon={CheckCircle} tone="green" label="On-time FB's" value={<V v={o.onTimeFbs} fmt={num} />} />
@@ -596,8 +599,6 @@ const ServiceTab = ({ d, x }) => {
           <Bullets items={o.actions} icon={ChevronRight} color="text-purple-600" />
         </Card>
       </div>
-
-      <MissedPuCard m={d.missedPu} />
 
       <Card title="Scanning compliance — freight bills scanned" subtitle={`In/out of facility · ${sc.dateRange}`} icon={Activity}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
