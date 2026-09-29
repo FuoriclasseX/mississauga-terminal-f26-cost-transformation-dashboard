@@ -1555,7 +1555,7 @@ const QaTab = ({ d, x }) => {
       q: 'What is your SCA target?',
       a: [
         `September SCA target: ${f(s.scaTargetHours, num)} dock hours — F26 September ${f(s.f26Hours, num)} hrs less the ${f(s.hourReductionTarget, num)}-hour reduction target.`,
-        `Daily: ${f(s.wdTargetPerDay, num)} hours per working day (${f(s.cdTargetPerDay, num)} per calendar day).`,
+        `Daily: ${f(s.wdTargetPerDay, num)} hours per working day (${f(s.cdTargetPerDay, num)} per calendar day). Working days = Mon–Fri as in the SCA report; the terminal also runs a day shift on Saturday and Sunday (no AM or PM), and those hours are in the MTD totals.`,
         `Cost per PRO target: ${f(s.costPerProTarget, (v) => money(v, 2))}.`,
       ],
     },
@@ -1592,8 +1592,9 @@ const QaTab = ({ d, x }) => {
     {
       q: 'What is your spend rate?',
       a: [
-        `Dock labour ${f(s.f27TotalCost, money)} September MTD over ${f(s.wdMtd, num)} working days ≈ ${f(perWd, money)} per working day.`,
-        `Projected September ≈ ${f(projSept, kMoney)} vs ${f(s.f26TotalCost, kMoney)} F26 September (${f(projVsF26, (v) => pct(v, 0))}).`,
+        `Dock labour ${f(s.f27TotalCost, money)} September MTD (Sep 1–26) includes weekend work — 1 day shift Saturday and 1 day shift Sunday (no AM or PM), 3–4 agency workers × 8 hrs × $31/hr ≈ $750–$1,000 per weekend day (7 weekend days so far ≈ $5.2K–$6.9K).`,
+        'That leaves ≈ $7.0K–$7.1K per weekday (18 weekdays, Labour Day excluded).',
+        `Projected September ≈ ${f(projSept, (v) => '$' + Math.round(v / 1000) + 'K')} incl. weekend day shifts vs ${f(s.f26TotalCost, kMoney)} F26 September (${f(projVsF26, (v) => pct(v, 0))}).`,
         `Cost per dock hour ${f(p.f27.hourlyRate, (v) => money(v, 2))} (${x.rateVsLy ? signed(x.rateVsLy.pct, (v) => pct(v)) : '—'} YoY — wage rate); cost per unit ${f(x.cpu27, (v) => money(v, 2))} vs ${f(x.cpu26, (v) => money(v, 2))}.`,
         'Total terminal (P&L): ≈$1.28M a month in F27 Jul–Aug vs ≈$1.63M the same months last year (−21.2%); total cost per PRO $35.93 vs $42.07 — most of the drop is P&D driver mix.',
       ],
@@ -2238,7 +2239,7 @@ const ScaTab = ({ d, x }) => {
   ];
   const labourReady = allNum(s.f26CompanyCost, s.f26AgencyCost, s.f27CompanyCost, s.f27AgencyCost);
   const cppLabel = { green: 'On target', amber: 'Amber band (95–100% of target)', red: 'Over target', gray: '' }[x.cppTone];
-  const periodNote = `F26 = full September 2025 · F27 = September MTD (${isNum(s.wdMtd) ? s.wdMtd : '—'} of ${isNum(s.wdMonth) ? s.wdMonth : '—'} working days)`;
+  const periodNote = `F26 = full September 2025 · F27 = September MTD (${isNum(s.wdMtd) ? s.wdMtd : '—'} of ${isNum(s.wdMonth) ? s.wdMonth : '—'} weekdays; Sat & Sun day shifts included)`;
 
   return (
     <>
