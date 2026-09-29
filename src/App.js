@@ -2523,6 +2523,7 @@ const ShiftCard = ({ s }) => {
         </div>
         <div>
           <p className="mb-2 text-sm font-semibold text-gray-700">Headcount per shift — agency vs D&R</p>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-gray-200 text-left text-gray-500">
@@ -2558,6 +2559,7 @@ const ShiftCard = ({ s }) => {
               })}
             </tbody>
           </table>
+          </div>
           <p className="mt-2 text-xs text-gray-500"><span className="text-slate-600">■</span> Agency <span className="ml-2 text-orange-600">■</span> D&R. Admin ratio: {ratio(tot('agencyAdmin'), tot('drAdmin'))} ({tot('agencyAdmin')} agency / {tot('drAdmin')} D&R).</p>
           <p className="mt-2 text-xs text-gray-500">People who worked that day. Not Day & Ross = agency. Dock / admin by department; admin includes dispatch.</p>
         </div>
@@ -2855,6 +2857,7 @@ const LoadQualityCard = ({ d }) => {
                   <p className="font-bold text-gray-900">{pr.name}</p>
                   <p className="mt-1 text-sm text-gray-700"><span className="font-semibold text-orange-700">For: </span>{pr.use}</p>
                   <p className="mt-1 text-sm text-gray-600"><span className="font-semibold text-gray-700">How it helps: </span>{pr.how}</p>
+                  {pr.credit && <p className="mt-2 text-xs italic text-gray-400">Photo: {pr.credit}</p>}
                 </div>
               );
             })}

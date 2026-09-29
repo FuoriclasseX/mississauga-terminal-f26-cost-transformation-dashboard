@@ -611,11 +611,11 @@ export const DEFAULT_DATA = {
     // Handling equipment we plan to use — and what for
     products: [
       { name: 'Collapsible load tables', img: '/img/collapsible-extended.jpg', use: 'Second tier in the trailer over short or fragile freight.', how: 'Fold flat and stack when empty; a forklift moves them. Frees dock space here and at the receiving terminal.' },
-      { name: 'ANCRA knock-down pallet decks', use: 'A second deck level for palletized freight (E-track).', how: 'Uses the top half of the trailer; freight is not stacked on freight, so less crushing.' },
-      { name: 'ANCRA divider deck-board kits', use: 'Deck boards across the trailer to lock loads in place.', how: 'Stops shifting in transit; nothing falls when the doors open.' },
-      { name: 'Yellow panel cart', use: 'MAAX glass shower doors and bases, 75-inch TVs, panels.', how: 'Freight rides upright and secured; rolls in and out of the trailer by hand.' },
-      { name: 'Grey cage / bin cart', use: 'Glass, TVs and small loose freight; staging for final mile or transfer.', how: 'Lifted in and out by forklift: one move instead of many hand-carries.' },
-      { name: 'Panel trucks & reconfigurable racks', use: 'Windows, doors, panels and car parts — long, flat, awkward freight.', how: 'Options: Sawtrax, Rack and Shelf, Grainger vertical panel truck (1,800 lb), Uline carpeted panel truck (30×60).' },
+      { name: 'ANCRA knock-down pallet decks', img: '/img/prod-ancra-pallet-deck.jpg', credit: 'ANCRA — Knock Down Pallet Deck', use: 'A second deck level for palletized freight (E-track).', how: 'Uses the top half of the trailer; freight is not stacked on freight, so less crushing.' },
+      { name: 'ANCRA divider deck-board kits', img: '/img/prod-ancra-deck-board.jpg', credit: 'ANCRA — Versatile Security Divider & Deck Board', use: 'Deck boards across the trailer to lock loads in place.', how: 'Stops shifting in transit; nothing falls when the doors open.' },
+      { name: 'Yellow panel cart', img: '/img/prod-yellow-panel-cart.jpg', credit: 'SawTrax — Yel-Low Safety Dolly', use: 'MAAX glass shower doors and bases, 75-inch TVs, panels.', how: 'Freight rides upright and secured; rolls in and out of the trailer by hand.' },
+      { name: 'Grey cage / bin cart', img: '/img/prod-grey-cage-cart.jpg', credit: 'Warehouse Rack & Shelf — stackable transport rack', use: 'Glass, TVs and small loose freight; staging for final mile or transfer.', how: 'Lifted in and out by forklift: one move instead of many hand-carries.' },
+      { name: 'Panel trucks & reconfigurable racks', img: '/img/prod-panel-truck-rack.jpg', credit: 'Grainger — adjustable panel truck, 1,800 lb', use: 'Windows, doors, panels and car parts — long, flat, awkward freight.', how: 'Options: Sawtrax, Rack and Shelf, Grainger vertical panel truck (1,800 lb), Uline carpeted panel truck (30×60).' },
     ],
     collapsible: {
       photos: [
