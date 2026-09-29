@@ -1914,7 +1914,21 @@ const ProductivityTab = ({ d, x }) => {
               </figure>
             ))}
           </div>
-          {d.loadQuality.useCase && <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{d.loadQuality.useCase}</div>}
+          {d.loadQuality.useCase && (
+            <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+              <p>{d.loadQuality.useCase}</p>
+              {d.loadQuality.glassPhotos && (
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {d.loadQuality.glassPhotos.map((ph) => (
+                    <figure key={ph.img} className="overflow-hidden rounded-lg border border-amber-200 bg-white">
+                      <img src={ph.img} alt={ph.caption} className="h-40 w-full object-cover" loading="lazy" />
+                      <figcaption className="p-2 text-xs text-gray-600">{ph.caption}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <p className="mb-1 mt-4 text-sm font-semibold text-gray-700">Equipment</p>
           <Bullets items={d.loadQuality.equipment} icon={ChevronRight} color="text-purple-600" />
           <p className="mb-1 mt-4 text-sm font-semibold text-gray-700">Why</p>
