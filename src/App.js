@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ReferenceLine, Cell, LabelList
+  ResponsiveContainer, ReferenceLine, ReferenceArea, Cell, LabelList
 } from 'recharts';
 import {
   Shield, Clock, DollarSign, Target, TrendingDown, TrendingUp, CheckCircle,
@@ -75,13 +75,18 @@ const fiscalProgress = () => {
 // ---------------------------------------------------------------------------
 const derive = (d) => {
   const o = d.ots;
-  const otsUnadj = allNum(o.onTimeFbs, o.totalFbs) && o.totalFbs > 0 ? (o.onTimeFbs / o.totalFbs) * 100 : null;
-  const otsAdj = allNum(o.adjLates, o.totalFbs) && o.totalFbs > 0 ? ((o.totalFbs - o.adjLates) / o.totalFbs) * 100 : null;
-  const codeRows = Object.entries(o.codes).map(([code, count]) => ({
-    code,
-    count,
-    pct: allNum(count, o.unadjLates) && o.unadjLates > 0 ? (count / o.unadjLates) * 100 : null,
-  }));
+  const oi = o.inclPartners;
+  const oe = o.exclPartners;
+  const inclTotal = allNum(oi.lateFbs, oi.onTimeFbs) ? oi.lateFbs + oi.onTimeFbs : null;
+  const exclTotal = allNum(oe.lateFbs, oe.onTimeFbs) ? oe.lateFbs + oe.onTimeFbs : null;
+  const partnerFbs = allNum(inclTotal, exclTotal) ? inclTotal - exclTotal : null;
+  const partnerLate = allNum(oi.lateFbs, oe.lateFbs) ? oi.lateFbs - oe.lateFbs : null;
+  const partnerOnTimePct = allNum(partnerFbs, partnerLate) && partnerFbs > 0 ? ((partnerFbs - partnerLate) / partnerFbs) * 100 : null;
+  const partnerVolShare = allNum(partnerFbs, inclTotal) && inclTotal > 0 ? (partnerFbs / inclTotal) * 100 : null;
+  const partnerLateShare = allNum(partnerLate, oi.lateFbs) && oi.lateFbs > 0 ? (partnerLate / oi.lateFbs) * 100 : null;
+  const otsLatest = [...o.months].reverse().find((m) => isNum(m.incl)) || null;
+  const codeRows = Object.entries(o.codes).map(([code, count]) => ({ code, count }));
+  const codesHaveData = codeRows.some((r) => isNum(r.count));
 
   const s = d.sca;
   const cppPctOfTarget = isNum(s.costPerProPctOfTarget)
@@ -157,7 +162,7 @@ const derive = (d) => {
     .filter((fl) => !isNum(getIn(d, fl.path))).length;
 
   return {
-    otsUnadj, otsAdj, codeRows, cppPctOfTarget, cppUnder, cppTone, cppBelowTargetValue, labour,
+    partnerFbs, partnerLate, partnerOnTimePct, partnerVolShare, partnerLateShare, otsLatest, codeRows, codesHaveData, cppPctOfTarget, cppUnder, cppTone, cppBelowTargetValue, labour,
     hoursDelta, wdPctUsed, cdPctUsed, monthPctUsed, wdElapsedPct, hoursUnder, hoursUnderValue,
     paceHours, paceReduction, paceVsReductionTarget,
     initAnnual, initYtd, initHasAnnual, initHasYtd,
@@ -313,7 +318,7 @@ const OverviewTab = ({ d, x, go }) => {
   const p27 = d.productivity.f27;
   const agenda = [
     { id: 'safety', icon: Shield, title: 'Safety', text: 'Current TRIR, what we do every shift, and what we are adding in F27.' },
-    { id: 'service', icon: Clock, title: 'Service', text: 'Missed pickups, OTS and late codes, and scanning compliance.' },
+    { id: 'service', icon: Clock, title: 'Service', text: 'On-time service incl./excl. partner carriers, missed pickups and scanning.' },
     { id: 'sca', icon: DollarSign, title: 'SCA & Savings', text: 'Hours vs allowance, cost per PRO, labour cost and the F27 take-out plan.' },
     { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, cost per hour, load factor and CICO.' },
     { id: 'terminal', icon: Wrench, title: 'Physical Terminal', text: 'Condition of the building and urgent repairs.' },
@@ -359,9 +364,10 @@ const OverviewTab = ({ d, x, go }) => {
         <Kpi
           icon={Clock}
           tone="purple"
-          label={`Service · OTS adjusted (${d.ots.period})`}
-          value={<V v={x.otsAdj} fmt={(v) => pct(v, 2)} />}
-          sub={<>Unadjusted <V v={x.otsUnadj} fmt={(v) => pct(v, 2)} small /> · Target <V v={d.ots.target} fmt={(v) => pct(v, 1)} small /></>}
+          label={`Service · OTS adjusted (${x.otsLatest ? x.otsLatest.label : 'latest month'})`}
+          value={<V v={x.otsLatest && x.otsLatest.incl} fmt={(v) => pct(v)} />}
+          sub={<>Excl. partner carriers <V v={x.otsLatest && x.otsLatest.excl} fmt={(v) => pct(v)} small /> · target <V v={d.ots.target} fmt={(v) => pct(v, 0)} small /></>}
+          footer={isNum(d.ots.last7Pct) && <Chip tone={d.ots.last7Pct >= (d.ots.target || 0) ? 'green' : 'amber'}>Last 7 days {pct(d.ots.last7Pct, 2)}</Chip>}
         />
         <Kpi
           icon={DollarSign}
@@ -520,7 +526,6 @@ const SafetyTab = ({ d }) => {
 const ServiceTab = ({ d, x }) => {
   const o = d.ots;
   const sc = d.scanning;
-  const codeData = x.codeRows.filter((r) => isNum(r.count));
   const scanTiles = [
     { label: 'Delivery trips', v: sc.deliveryPct, ytd: sc.deliveryFytdPct },
     { label: 'Line haul — outbound', v: sc.lineHaulOutPct, ytd: sc.lineHaulOutFytdPct },
@@ -532,73 +537,146 @@ const ServiceTab = ({ d, x }) => {
       <PageHeader
         eyebrow="2 · Service"
         icon={Clock}
-        title="Service — Missed Pickups, OTS & Scanning"
+        title="Service — On-Time, Missed Pickups & Scanning"
         subtitle="Current service levels, what is driving the misses and lates, and the plan to improve in F27."
       />
-      <MissedPuCard m={d.missedPu} />
-      <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-5">
-        <Kpi icon={Package} tone="gray" label={`Total FB's · ${o.period}`} value={<V v={o.totalFbs} fmt={num} />} />
-        <Kpi icon={CheckCircle} tone="green" label="On-time FB's" value={<V v={o.onTimeFbs} fmt={num} />} />
-        <Kpi icon={Clock} tone="purple" label="OTS unadjusted" value={<V v={x.otsUnadj} fmt={(v) => pct(v, 2)} />} sub={<>UNADJ lates <V v={o.unadjLates} fmt={num} small /></>} />
-        <Kpi
-          icon={Target}
-          tone={allNum(x.otsAdj, o.target) ? (x.otsAdj >= o.target ? 'green' : 'red') : 'purple'}
-          label="OTS adjusted"
-          value={<V v={x.otsAdj} fmt={(v) => pct(v, 2)} />}
-          sub={<>ADJ lates <V v={o.adjLates} fmt={num} small /></>}
-        />
-        <Kpi icon={Award} tone="blue" label="OTS target" value={<V v={o.target} fmt={(v) => pct(v, 1)} />} />
-      </div>
-
-      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
-        <Card title="Lates by reason code" subtitle="Share of unadjusted lates" icon={BarChart3} className="lg:col-span-3">
-          {codeData.length ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={codeData} margin={{ top: 20, right: 10, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="code" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v) => num(v)} />
-                <Bar dataKey="count" name="Lates" radius={[4, 4, 0, 0]}>
-                  {codeData.map((r) => (
-                    <Cell key={r.code} fill={r.code === 'IN' || r.code === 'TB' ? '#9ca3af' : '#7c3aed'} />
-                  ))}
-                  <LabelList dataKey="count" position="top" style={{ fontSize: 11, fill: '#374151' }} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChart height={280} />
-          )}
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-gray-500">
-                  {x.codeRows.map((r) => (
-                    <th key={r.code} className="px-1 py-1 text-center font-semibold">{r.code}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  {x.codeRows.map((r) => (
-                    <td key={r.code} className="px-1 py-1 text-center font-medium text-gray-800"><V v={r.count} fmt={num} small /></td>
-                  ))}
-                </tr>
-                <tr className="text-gray-500">
-                  {x.codeRows.map((r) => (
-                    <td key={r.code} className="px-1 py-1 text-center">{isNum(r.pct) ? pct(r.pct) : '—'}</td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
+      <Card title="On-time service (adjusted)" subtitle={`Adj On Time dashboard · ${o.period}`} icon={Clock} className="mb-8">
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {[
+            { label: `${x.otsLatest ? x.otsLatest.label : 'Latest month'} · incl. partner carriers`, v: x.otsLatest && x.otsLatest.incl },
+            { label: `${x.otsLatest ? x.otsLatest.label : 'Latest month'} · excl. partner carriers`, v: x.otsLatest && x.otsLatest.excl },
+            { label: 'Last 7 days (Sep 22–28)', v: o.last7Pct, d: 2 },
+          ].map((t) => {
+            const good = allNum(t.v, o.target) ? t.v >= o.target : null;
+            return (
+              <div key={t.label} className={`rounded-xl p-4 ${good === null ? 'bg-gray-50' : good ? 'bg-green-50' : 'bg-amber-50'}`}>
+                <p className="text-sm font-medium text-gray-600">{t.label}</p>
+                <p className={`text-4xl font-bold ${good === null ? 'text-gray-900' : good ? 'text-green-700' : 'text-amber-700'}`}>
+                  <V v={t.v} fmt={(v) => pct(v, t.d || 1)} />
+                </p>
+              </div>
+            );
+          })}
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="text-sm font-medium text-gray-600">Target</p>
+            <p className="text-4xl font-bold text-gray-900"><V v={o.target} fmt={(v) => pct(v, 0)} /></p>
+            <p className="text-xs text-gray-500">Adjusted on time</p>
           </div>
-          <Source>IN = agent / beyond-carrier delays · TB = transborder delays — outside terminal control (shown in grey).</Source>
-        </Card>
-        <Card title="Plan to improve OTS" icon={Zap} className="lg:col-span-2">
-          <Bullets items={o.actions} icon={ChevronRight} color="text-purple-600" />
-        </Card>
-      </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+            <p className="mb-2 text-sm font-semibold text-gray-700">Adjusted on-time % by month — including vs excluding partner carriers</p>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={o.months} margin={{ top: 20, right: 20, bottom: 0, left: -10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <ReferenceArea x1="Jul" x2="Sep" fill="#7c3aed" fillOpacity={0.06} label={{ value: 'F27', position: 'insideTopRight', fill: '#7c3aed', fontSize: 12, fontWeight: 600 }} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis domain={[75, 100]} ticks={[75, 80, 85, 90, 95, 100]} tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v)} />
+                <Legend />
+                {isNum(o.target) && (
+                  <ReferenceLine y={o.target} stroke="#059669" strokeDasharray="5 5" label={{ value: `Target ${o.target}%`, position: 'insideBottomLeft', fill: '#059669', fontSize: 11 }} />
+                )}
+                <Line type="monotone" dataKey="incl" name="Incl. partner carriers" stroke="#7c3aed" strokeWidth={3} dot={{ r: 4 }}>
+                  <LabelList dataKey="incl" position="bottom" style={{ fontSize: 10, fill: '#6d28d9' }} />
+                </Line>
+                <Line type="monotone" dataKey="excl" name="Excl. partner carriers" stroke="#06b6d4" strokeWidth={3} dot={{ r: 4 }}>
+                  <LabelList dataKey="excl" position="top" style={{ fontSize: 10, fill: '#0e7490' }} />
+                </Line>
+              </LineChart>
+            </ResponsiveContainer>
+            <p className="mt-2 text-sm text-gray-600">
+              Jan–Jun = F26 · Jul–Sep = F27. OTS has climbed every month since April (81.5%) and is above target since August.
+            </p>
+          </div>
+          <div className="space-y-4 lg:col-span-2">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-gray-200 text-left text-gray-500">
+                    <th className="py-2 pr-2 font-semibold">{o.period}</th>
+                    <th className="py-2 pr-2 text-right font-semibold">Incl. partners</th>
+                    <th className="py-2 text-right font-semibold">Excl. partners</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 text-gray-700">Adj on time</td>
+                    <td className="py-2 pr-2 text-right font-semibold"><V v={o.inclPartners.pct} fmt={(v) => pct(v, 2)} small /></td>
+                    <td className="py-2 text-right font-semibold text-green-700"><V v={o.exclPartners.pct} fmt={(v) => pct(v, 2)} small /></td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-2 pr-2 text-gray-700">Late FBs</td>
+                    <td className="py-2 pr-2 text-right"><V v={o.inclPartners.lateFbs} fmt={num} small /></td>
+                    <td className="py-2 text-right"><V v={o.exclPartners.lateFbs} fmt={num} small /></td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-2 text-gray-700">On-time FBs</td>
+                    <td className="py-2 pr-2 text-right"><V v={o.inclPartners.onTimeFbs} fmt={num} small /></td>
+                    <td className="py-2 text-right"><V v={o.exclPartners.onTimeFbs} fmt={num} small /></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            {isNum(x.partnerOnTimePct) && (
+              <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
+                <p className="font-semibold">Partner-carrier (beyond interliner) freight</p>
+                <p className="mt-1">
+                  ≈{num(x.partnerFbs)} FBs, ≈{num(x.partnerLate)} late → only <span className="font-semibold">≈{pct(x.partnerOnTimePct, 0)} on time</span>. About{' '}
+                  {pct(x.partnerVolShare, 0)} of volume but <span className="font-semibold">≈{pct(x.partnerLateShare, 0)} of all late FBs</span>.
+                </p>
+                <p className="mt-1 text-xs text-amber-800">Calculated: included minus excluded totals.</p>
+              </div>
+            )}
+            <div>
+              <p className="mb-1 text-sm font-semibold text-gray-700">Last 7 days</p>
+              <ResponsiveContainer width="100%" height={130}>
+                <BarChart data={o.last7Days} margin={{ top: 16, right: 0, bottom: 0, left: -30 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                  <YAxis domain={[80, 100]} tick={{ fontSize: 10 }} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v)} />
+                  <Bar dataKey="pct" name="Adj on time %" radius={[3, 3, 0, 0]}>
+                    {o.last7Days.map((r) => (
+                      <Cell key={r.label} fill={isNum(o.target) && r.pct >= o.target ? '#059669' : '#f59e0b'} />
+                    ))}
+                    <LabelList dataKey="pct" position="top" style={{ fontSize: 10, fill: '#374151' }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div>
+            <p className="mb-2 text-sm font-semibold text-gray-700">Plan to hold and improve OTS</p>
+            <Bullets items={o.actions} icon={ChevronRight} color="text-purple-600" />
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-semibold text-gray-700">Lates by reason code</p>
+            {x.codesHaveData ? (
+              <div className="flex flex-wrap gap-2">
+                {x.codeRows.filter((r) => isNum(r.count)).map((r) => (
+                  <Chip key={r.code} tone={r.code === 'IN' || r.code === 'TB' ? 'gray' : 'purple'}>
+                    {r.code}: {num(r.count)}
+                  </Chip>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Late codes (AS, BD, OT, TF, LH, DL, MS, IN, TB) <Tbc small /> — add in Edit data.
+              </p>
+            )}
+            <Source>IN = agent / beyond-carrier delays · TB = transborder delays — outside terminal control.</Source>
+          </div>
+        </div>
+        <Source>
+          Source: Adj On Time dashboard — Mississauga, {o.period}. “Beyond interliner” = partner-carrier freight; the excluded view shows terminal-controlled performance.
+        </Source>
+      </Card>
+
+      <MissedPuCard m={d.missedPu} />
 
       <Card title="Scanning compliance — freight bills scanned" subtitle={`In/out of facility · ${sc.dateRange}`} icon={Activity}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

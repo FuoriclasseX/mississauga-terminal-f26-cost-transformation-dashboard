@@ -64,13 +64,36 @@ export const DEFAULT_DATA = {
   //   UNADJ% = On-time FBs / Total FBs
   //   ADJ%   = (Total FBs − ADJ lates) / Total FBs
   // --------------------------------------------------------------------------
+  // Source: Adj On Time dashboard — Mississauga, calendar 2026 through Sep 28.
+  // "Beyond interliner" = partner-carrier freight. inclPartners = filter "All"
+  // (included), exclPartners = filter "N" (excluded) to show the difference.
   ots: {
-    period: 'Sept MTD',
-    target: null,           // e.g. 95 (% adjusted)
-    totalFbs: null,
-    onTimeFbs: null,
-    unadjLates: null,
-    adjLates: null,
+    period: 'Jan – Sep 28, 2026',
+    target: 90,               // dashboard green line (80–90 amber, <80 red)
+    last7Pct: 94.35,          // Adj total on-time % 7-day avg (Sep 22–28, incl. partners)
+    last7Days: [
+      { label: 'Sep 22', pct: 90.1 },
+      { label: 'Sep 23', pct: 94.6 },
+      { label: 'Sep 24', pct: 93.6 },
+      { label: 'Sep 25', pct: 95.4 },
+      { label: 'Sep 26', pct: 95.0 },
+      { label: 'Sep 27', pct: 100.0 },
+      { label: 'Sep 28', pct: 95.8 },
+    ],
+    week40: { incl: 95.82, excl: 97.81 },
+    inclPartners: { pct: 87.6, lateFbs: 12650, onTimeFbs: 89340 },   // dashboard shows 12.65K / 89.34K
+    exclPartners: { pct: 92.24, lateFbs: 6910, onTimeFbs: 82070 },   // dashboard shows 6.91K / 82.07K
+    months: [
+      { label: 'Jan', fy: 'F26', incl: 87.5, excl: 87.5 },
+      { label: 'Feb', fy: 'F26', incl: 87.8, excl: 87.9 },
+      { label: 'Mar', fy: 'F26', incl: 84.9, excl: 88.4 },
+      { label: 'Apr', fy: 'F26', incl: 81.5, excl: 88.8 },
+      { label: 'May', fy: 'F26', incl: 83.6, excl: 92.1 },
+      { label: 'Jun', fy: 'F26', incl: 85.5, excl: 91.8 },
+      { label: 'Jul', fy: 'F27', incl: 89.3, excl: 94.4 },
+      { label: 'Aug', fy: 'F27', incl: 91.7, excl: 94.7 },
+      { label: 'Sep', fy: 'F27', incl: 93.7, excl: 96.7 },
+    ],
     // Late reason codes (counts). IN = agent / beyond carrier, TB = transborder
     codes: {
       AS: null, BD: null, OT: null, TF: null, LH: null, DL: null,
@@ -81,7 +104,7 @@ export const DEFAULT_DATA = {
       'Scanning compliance checked every shift (see Scanning slide).',
       'TF (terminal) and P&D working collectively on hand-offs.',
       'End-of-shift reporting on afternoons — every late coded before shift end.',
-      'Interline (IN) and transborder (TB) lates reviewed with the interline team — outside terminal control.',
+      'Partner-carrier (beyond interliner) lates reviewed weekly with the interline team — largely outside terminal control.',
     ],
   },
 
@@ -341,17 +364,19 @@ export const EDIT_SECTIONS = [
     ],
   },
   {
-    title: 'Service — OTS',
+    title: 'Service — OTS (adjusted)',
     fields: [
       f('ots.period', 'Period label', 'text'),
-      f('ots.target', 'OTS target (adj %)'),
-      f('ots.totalFbs', "Total FB's"),
-      f('ots.onTimeFbs', "On-time FB's"),
-      f('ots.unadjLates', 'UNADJ lates'),
-      f('ots.adjLates', 'ADJ lates'),
-      ...['AS', 'BD', 'OT', 'TF', 'LH', 'DL', 'MS', 'IN', 'TB', 'OTHER', 'UNCODED'].map((c) =>
-        f(`ots.codes.${c}`, `Late code ${c}`)
-      ),
+      f('ots.target', 'OTS target %'),
+      f('ots.last7Pct', '7-day avg %'),
+      f('ots.months.8.incl', 'Sept % incl. partners'),
+      f('ots.months.8.excl', 'Sept % excl. partners'),
+      f('ots.inclPartners.pct', 'YTD % incl. partners'),
+      f('ots.inclPartners.lateFbs', 'YTD late FBs incl. partners'),
+      f('ots.inclPartners.onTimeFbs', 'YTD on-time FBs incl. partners'),
+      f('ots.exclPartners.pct', 'YTD % excl. partners'),
+      f('ots.exclPartners.lateFbs', 'YTD late FBs excl. partners'),
+      f('ots.exclPartners.onTimeFbs', 'YTD on-time FBs excl. partners'),
     ],
   },
   {
