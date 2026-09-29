@@ -494,6 +494,7 @@ export const DEFAULT_DATA = {
       'Panel trucks and reconfigurable racks (Sawtrax, Rack and Shelf, Grainger, Uline) — long, flat and awkward freight: windows, doors, panels, car parts',
       'Load bars and straps on every mixed load',
     ],
+    useCase: 'Example: MAAX shower doors and bases (thin, all glass) and 75" TVs currently ride standing loose in the trailer (trailer 47520). Slot them into panel carts instead — the yellow cart rolls in and out by hand, the grey cage is picked up by forklift. Secured in transit, faster to load and unload, far less breakage.',
     benefits: [
       'Uses the top half of the trailer — lifts load factor (LF score 36.4% F27)',
       'Less shifting and crushing — fewer damaged freight bills (1.61% 7-day avg) and claims',

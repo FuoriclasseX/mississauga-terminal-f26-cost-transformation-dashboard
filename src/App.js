@@ -1914,6 +1914,7 @@ const ProductivityTab = ({ d, x }) => {
               </figure>
             ))}
           </div>
+          {d.loadQuality.useCase && <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{d.loadQuality.useCase}</div>}
           <p className="mb-1 mt-4 text-sm font-semibold text-gray-700">Equipment</p>
           <Bullets items={d.loadQuality.equipment} icon={ChevronRight} color="text-purple-600" />
           <p className="mb-1 mt-4 text-sm font-semibold text-gray-700">Why</p>
