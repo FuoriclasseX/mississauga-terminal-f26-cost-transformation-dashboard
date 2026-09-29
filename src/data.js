@@ -39,6 +39,7 @@ export const DEFAULT_DATA = {
     trir12mmAvg: 1.21,
     trirTarget: null,        // no target given
     recordablesF27Ytd: 0,    // employee + contractor incidents YTD
+    lastRecordableDate: '2025-09-10', // days since is calculated from today
     daysSinceLastRecordable: null,
     stepObservationsMtd: null,
     // Mississauga talking points (from the presenter)
@@ -171,12 +172,27 @@ export const DEFAULT_DATA = {
   claims: {
     terminalCode: 'T-0502',
     amount: 13432.53,
-    period: null,             // period not stated in the report extract
+    period: 'August 2026',    // September not closed yet
   },
 
   // --------------------------------------------------------------------------
   // SERVICE — SCANNING COMPLIANCE (Freight Bills Scanned %)
   // --------------------------------------------------------------------------
+  // % Damaged FB dashboard — Mississauga (PU terminal), to Sep 28, 2026
+  damage: {
+    last7Pct: 1.61,
+    last7Days: [
+      { label: 'Sep 22', pct: 3.34 },
+      { label: 'Sep 23', pct: 2.32 },
+      { label: 'Sep 24', pct: 2.22 },
+      { label: 'Sep 25', pct: 1.9 },
+      { label: 'Sep 27', pct: 0.39 },
+      { label: 'Sep 28', pct: 0.31 },
+    ],
+    week39: 2.1,
+    week40: 0.31,              // partial week
+  },
+
   // Compliance Reporting — Scanning Efficiency In/Out of Terminals,
   // D&R Commerce Mississauga, Sep 1–28, 2026 (28 days), all trip types
   scanning: {

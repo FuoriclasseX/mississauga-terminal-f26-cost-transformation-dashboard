@@ -153,6 +153,11 @@ const derive = (d) => {
       ? (cicoHours / cicoWeeksWithData) * 52 * c.avgHourlyRate
       : null;
 
+  const lastRec = d.safety.lastRecordableDate ? new Date(`${d.safety.lastRecordableDate}T00:00:00`) : null;
+  const daysSinceRecordable = isNum(d.safety.daysSinceLastRecordable)
+    ? d.safety.daysSinceLastRecordable
+    : lastRec ? Math.floor((new Date() - lastRec) / 86400000) : null;
+
   const repairs = d.terminal.repairs.filter((r) => r.item && String(r.item).trim());
   const repairCost = sum(repairs.map((r) => r.estCost));
 
@@ -170,7 +175,7 @@ const derive = (d) => {
     hoursAtF26Rate, hoursAvoided, hoursAvoidedValue,
     cpu27, cpu26, cpuVsLy, cpuSavings, unitsVsLy,
     cicoHours, cicoHasHours, cicoValue, cicoAnnualized,
-    repairs, repairCost, missing,
+    daysSinceRecordable, repairs, repairCost, missing,
   };
 };
 
@@ -482,7 +487,7 @@ const OverviewTab = ({ d, x, go }) => {
 };
 
 // --- Safety ----------------------------------------------------------------
-const SafetyTab = ({ d }) => {
+const SafetyTab = ({ d, x }) => {
   const s = d.safety;
   const trirGood = allNum(s.trirF27Ytd, s.trirTarget) ? s.trirF27Ytd <= s.trirTarget : allNum(s.trirF27Ytd, s.trirF26) ? s.trirF27Ytd <= s.trirF26 : null;
   return (
@@ -512,7 +517,7 @@ const SafetyTab = ({ d }) => {
         <Kpi icon={Target} tone="purple" label="12-month avg" value={<V v={s.trir12mmAvg} fmt={(v) => num(v, 2)} />} />
         <Kpi icon={Calendar} tone="gray" label="TRIR F26" value={<V v={s.trirF26} fmt={(v) => num(v, 2)} />} />
         <Kpi icon={AlertTriangle} tone={s.recordablesF27Ytd === 0 ? 'green' : 'amber'} label="Recordables F27 YTD" value={<V v={s.recordablesF27Ytd} fmt={num} />} />
-        <Kpi icon={CheckCircle} tone="green" label="Days since last recordable" value={<V v={s.daysSinceLastRecordable} fmt={num} />} />
+        <Kpi icon={CheckCircle} tone="green" label="Days since last recordable" value={<V v={x.daysSinceRecordable} fmt={num} />} sub={s.lastRecordableDate ? `Last: Sep 10, 2025` : null} />
       </div>
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card title="What we do every shift" icon={ClipboardCheck}>
@@ -681,7 +686,7 @@ const ServiceTab = ({ d, x }) => {
 
       <MissedPuCard m={d.missedPu} />
 
-      <Card title="Cargo claims" subtitle={`Claims report · terminal ${d.claims.terminalCode} (Mississauga)`} icon={Shield} className="mb-8">
+      <Card title="Cargo claims & damage" subtitle={`Claims report · terminal ${d.claims.terminalCode} (Mississauga)`} icon={Shield} className="mb-8">
         <div className="flex flex-wrap items-end gap-6">
           <div>
             <p className="text-sm font-medium text-gray-600">Claims amount</p>
@@ -694,6 +699,27 @@ const ServiceTab = ({ d, x }) => {
           <p className="max-w-xl text-sm text-gray-600">
             Cargo claims reduction is one of the F27 savings initiatives (see SCA & Savings). Handling procedures, reweighs and scan discipline all feed it.
           </p>
+        </div>
+        <div className="mt-6 grid grid-cols-1 gap-6 border-t border-gray-100 pt-5 lg:grid-cols-3">
+          <div>
+            <p className="text-sm font-medium text-gray-600">Damaged freight bills · 7-day avg</p>
+            <p className="text-4xl font-bold text-red-600"><V v={d.damage.last7Pct} fmt={(v) => pct(v, 2)} /></p>
+            <p className="text-xs text-gray-500">Week 39 {isNum(d.damage.week39) ? pct(d.damage.week39, 2) : '—'} · week 40 {isNum(d.damage.week40) ? pct(d.damage.week40, 2) : '—'} (partial)</p>
+            <p className="mt-2 text-sm text-gray-600">Daily rate trending down through the week — {pct(d.damage.last7Days[0].pct, 2)} on Sep 22 to {pct(d.damage.last7Days[d.damage.last7Days.length - 1].pct, 2)} on Sep 28.</p>
+          </div>
+          <div className="lg:col-span-2">
+            <ResponsiveContainer width="100%" height={150}>
+              <BarChart data={d.damage.last7Days} margin={{ top: 18, right: 5, bottom: 0, left: -25 }}>
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v, 2)} />
+                <Bar dataKey="pct" name="Damaged FB %" fill="#f87171" radius={[3, 3, 0, 0]}>
+                  <LabelList dataKey="pct" position="top" formatter={(v) => `${v}%`} style={{ fontSize: 10, fill: '#374151' }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <Source>Source: % Damaged FB dashboard — Mississauga (PU terminal), to Sep 28, 2026.</Source>
+          </div>
         </div>
       </Card>
 
