@@ -42,6 +42,30 @@ export const DEFAULT_DATA = {
     lastRecordableDate: '2025-09-10', // days since is calculated from today
     daysSinceLastRecordable: null,
     stepObservationsMtd: null,
+    // Safety initiatives — status (confirm "Completed" items)
+    initiatives: [
+      { name: 'Roofing work zones barricaded — no access under overhead work', status: 'Completed', note: 'In place while roofing continues' },
+      { name: 'N95 masks made readily available on the dock during roofing', status: 'Completed', note: 'Supply in place' },
+      { name: 'New shunt pre-trip checklist rolled out — used every shift', status: 'Completed', note: 'Now part of every shift' },
+      { name: 'Freight-handling equipment — panel trucks and reconfigurable racks for windows, panels and car parts', status: 'Planned', note: 'Options: Sawtrax, Rack and Shelf, Grainger vertical panel truck (1,800 lb), Uline carpeted panel truck 30×60 — safer handling, better load quality, fewer damages' },
+      { name: 'Tailgates + safety moments after every incident (e.g. pinch points)', status: 'Active' },
+      { name: 'Forklift pre/post-shift inspections by every operator', status: 'Active' },
+      { name: 'No loading forklifts on straight trucks', status: 'Active' },
+      { name: 'Monthly H&S inspections → OHS, reviewed at JHSC', status: 'Active' },
+      { name: 'STEP observations — non-compliance addressed and logged', status: 'Active' },
+      { name: 'Incident reporting, root cause and corrective-action follow-up with OHS', status: 'Active' },
+      { name: 'Monthly safety e-learning; forklift & TDG renewed before expiry', status: 'Active' },
+    ],
+    // Ideas to action (drafts — edit freely)
+    ideas: [
+      'Agency safety onboarding: site orientation, buddy for first shifts and forklift-cert check before day one — agency is ~61% of dock hours.',
+      'New-building safety plan: pre-move hazard walk, dock door / leveler / lighting inspection, traffic and pedestrian plan, layout training before go-live.',
+      'Near-miss reporting: every near miss logged and reviewed at the next tailgate; monthly trend at JHSC.',
+      'Pedestrian–forklift separation: marked walkways and blue-spot lights on forklifts.',
+      'Trailer securement audit each shift: chocks / dock locks and trailer-creep checks.',
+      'Winter readiness: yard salting schedule, ice cleats and slip-hazard checks before first frost.',
+      'Recognition for zero-incident shifts to reinforce safe behaviour.',
+    ],
     // Mississauga talking points (from the presenter)
     practices: [
       'Tailgates with the team on safety topics and safe work practices, plus specific safety moments after incidents (e.g. avoiding pinch points).',

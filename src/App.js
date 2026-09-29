@@ -524,6 +524,30 @@ const SafetyTab = ({ d, x }) => {
         <Kpi icon={AlertTriangle} tone={s.recordablesF27Ytd === 0 ? 'green' : 'amber'} label="Recordables F27 YTD" value={<V v={s.recordablesF27Ytd} fmt={num} />} />
         <Kpi icon={CheckCircle} tone="green" label="Days since last recordable" value={<V v={x.daysSinceRecordable} fmt={num} />} sub={s.lastRecordableDate ? `Last: Sep 10, 2025` : null} />
       </div>
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <Card title="Safety initiatives — status" icon={ClipboardCheck} className="lg:col-span-3">
+          <div className="mb-3 flex gap-2">
+            <Chip tone="green">{s.initiatives.filter((i) => i.status === 'Completed').length} completed</Chip>
+            <Chip tone="blue">{s.initiatives.filter((i) => i.status === 'Active').length} active</Chip>
+            <Chip tone="amber">{s.initiatives.filter((i) => i.status === 'Planned').length} planned</Chip>
+          </div>
+          <ul className="space-y-2">
+            {s.initiatives.map((i) => (
+              <li key={i.name} className="flex items-start justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-sm text-gray-800">
+                  {i.name}
+                  {i.note && <span className="block text-xs text-gray-500">{i.note}</span>}
+                </span>
+                <Chip tone={i.status === 'Completed' ? 'green' : i.status === 'Planned' ? 'amber' : 'blue'}>{i.status}</Chip>
+              </li>
+            ))}
+          </ul>
+        </Card>
+        <Card title="Ideas to action" icon={Zap} className="lg:col-span-2">
+          <Bullets items={s.ideas} icon={ChevronRight} color="text-purple-600" />
+        </Card>
+      </div>
+
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card title="What we do every shift" icon={ClipboardCheck}>
           <Bullets items={s.practices} />
@@ -1295,6 +1319,18 @@ const QaTab = ({ d, x }) => {
         `Adjusted on-time ${latest ? pct(latest.incl) : '—'} in ${latest ? latest.label : '—'} (${latest ? pct(latest.excl) : '—'} excluding partner carriers) vs ${f(o.target, (v) => pct(v, 0))} target; last 7 days ${f(o.last7Pct, (v) => pct(v, 2))}.`,
         `Missed pickups ${f(d.missedPu.missedPct, (v) => pct(v, 2))} overall, ${f(d.missedPu.last7Pct, (v) => pct(v, 2))} last 7 days — 45% are OPS false positives (close-out fix).`,
       ],
+    },
+    {
+      q: 'What safety initiatives are in place — active vs completed?',
+      a: [
+        `Completed: ${d.safety.initiatives.filter((i) => i.status === 'Completed').map((i) => i.name.split(' — ')[0]).join('; ')}.`,
+        `Active every shift: ${d.safety.initiatives.filter((i) => i.status === 'Active').map((i) => i.name.split(' — ')[0].split(';')[0]).join('; ')}.`,
+        ...d.safety.initiatives.filter((i) => i.status === 'Planned').map((i) => `Planned: ${i.name}. ${i.note || ''}`),
+      ],
+    },
+    {
+      q: 'What safety ideas can you action at the terminal?',
+      a: d.safety.ideas,
     },
     {
       q: 'How is safety?',
