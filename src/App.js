@@ -417,7 +417,7 @@ const OverviewTab = ({ d, x, go }) => {
           <span className="font-bold text-green-400">{isNum(x.wdPctUsed) ? `${pct(x.wdPctUsed)} of its SCA hour allowance` : 'under its SCA hour allowance'}</span>, cost per unit is{' '}
           <span className="font-bold text-green-400">{x.cpuVsLy ? `down ${pct(Math.abs(x.cpuVsLy.pct))} vs F26` : 'down vs F26'}</span>, units per hour are{' '}
           <span className="font-bold text-green-400">{x.uphVsLy ? `up ${pct(x.uphVsLy.pct)}` : 'up'}</span>, and overtime is only{' '}
-          <span className="font-bold text-yellow-300">{isNum(p27.otHours) ? `${num(p27.otHours)} hours` : 'minimal'}</span>. Looking ahead: if current rates hold, F27 spend on the tracked lines comes in{' '}
+          <span className="font-bold text-yellow-300">{isNum(p27.otHours) ? `${num(p27.otHours)} hours` : 'minimal'}</span>. Looking ahead: if current rates hold, Admin and Dock contract labour plus the dispatcher saving come in{' '}
           <span className="font-bold text-yellow-300">≈{kMoney(outlookTotal(d) + (x.initAnnual || 0))} below F26</span> (≈{kMoney((outlookTotal(d) + (x.initAnnual || 0)) / 12)} a month, estimate), including the confirmed $61K dispatcher saving. Next: closing the PPH gap and sizing the load-quality levers.
         </p>
         <div className="mt-6 max-w-xl">
@@ -1496,7 +1496,7 @@ const QaTab = ({ d, x }) => {
       a: [
         `F27 cost take-out target: ${f(s.f27SavingsTarget, money, 'to be confirmed with Finance')}.`,
         `Identified so far: ${f(identified, money)} per year — dispatcher role eliminated with dispatch centralized. More initiatives in development.`,
-        `F27 outlook if current rates hold: ≈${kMoney(outlookTotal(d) + (identified || 0))} below F26 (≈${kMoney((outlookTotal(d) + (identified || 0)) / 12)} a month) — Admin labour, Dock labour and other P&L lines plus the dispatcher saving (estimate, not booked).`,
+        `F27 outlook if current rates hold: ≈${kMoney(outlookTotal(d) + (identified || 0))} below F26 (≈${kMoney((outlookTotal(d) + (identified || 0)) / 12)} a month) — Admin and Dock contract labour plus the dispatcher saving (estimate, not booked).`,
         `Run-rate evidence: cost per unit ${f(x.cpu26, (v) => money(v, 2))} → ${f(x.cpu27, (v) => money(v, 2))} (≈${f(x.cpuSavings, kMoney)} avoided in September to date, cost-per-unit basis), hours under SCA allowance, agency share down.`,
       ],
       calc: true,
@@ -1506,7 +1506,7 @@ const QaTab = ({ d, x }) => {
       a: [
         `SCA hours: September requires ${f(s.hourReductionTarget, num)} fewer dock hours than F26 September (≈${f(reductionValue, kMoney)} at ${f(p.f27.hourlyRate, (v) => money(v, 2))}/hr). We are on pace for ≈${f(x.paceReduction, num)} — ${f(x.paceVsReductionTarget, (v) => pct(v, 0))} of the requirement.`,
         `Cost per PRO: stay under ${f(s.costPerProTarget, (v) => money(v, 2))} — currently ${f(x.cppUnder, (v) => money(v, 2))} under on average per PRO.`,
-        'Labour: hold the Jul–Aug rates (Admin agency −25%, Dock labour −4%); every extra 1% off F26 labour spend ≈ $50K/yr.',
+        'Contract labour: hold the Jul–Aug rates (Admin −25%, Dock −6%); every extra 1% off F26 contract labour ≈ $28K/yr.',
         isNum(s.f27SavingsTarget)
           ? `F27 take-out: ${money(s.f27SavingsTarget)} target − ${f(identified, money, '$0')} identified = ${money(gap)} still to find ≈ ${money(gapPerMonth)} per month over the ${monthsLeft} months left (Oct–Jun).`
           : `F27 take-out target: to be confirmed — ${f(identified, money, '$0')} confirmed so far; the remaining gap will be spread over the ${monthsLeft} months left (Oct–Jun).`,
@@ -1832,7 +1832,7 @@ const SpendTab = ({ d }) => {
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="rounded-lg bg-purple-50 p-4 text-sm text-purple-900">
             <p className="font-semibold">Terminal-controlled lines: net {signed(terminalNet, kMoney)} in two months (P&L variance, not booked savings)</p>
-            <p className="mt-1">Agency labour down in Admin and on the dock, repairs and rentals down ahead of the building move, dock owner-operator cost gone. Offsets: cargo claims and company wages.</p>
+            <p className="mt-1">Contract labour down in Admin and on the dock, and repairs down ahead of the building move. Offsets: cargo claims and company wages.</p>
           </div>
           <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
             <p className="font-semibold">P&D mix — not claimed as terminal savings</p>
@@ -1883,7 +1883,7 @@ const outlookTotal = (d) => {
   }));
 };
 
-const OUTLOOK_COLORS = { 'Admin labour': '#7c3aed', 'Dock labour': '#06b6d4', Other: '#f59e0b' };
+const OUTLOOK_COLORS = { 'Admin labour': '#7c3aed', 'Dock labour': '#06b6d4' };
 
 const SavingsOutlook = ({ d, identified }) => {
   const so = d.savingsOutlook;
@@ -1897,7 +1897,7 @@ const SavingsOutlook = ({ d, identified }) => {
     const monthly = l.f26.map((v, i) => (i < n ? v - l.f27[i] : -rate * v));
     return { ...l, rate, ytd: ly - ty, monthly, year: sum(monthly), base: sum(l.f26) };
   });
-  const groups = ['Admin labour', 'Dock labour', 'Other'];
+  const groups = ['Admin labour', 'Dock labour'];
   const byGroup = groups.map((g) => {
     const ls = lines.filter((l) => l.group === g);
     return { g, ls, year: sum(ls.map((l) => l.year)), ytd: sum(ls.map((l) => l.ytd)), base: sum(ls.map((l) => l.base)) };
@@ -1923,19 +1923,19 @@ const SavingsOutlook = ({ d, identified }) => {
     <Card title="F27 savings outlook — monthly and yearly roll-up" subtitle="Jul–Aug actual, Sep–Jun outlook at the current rate · savings vs the same month in F26" icon={TrendingUp} className="mb-8">
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div className="rounded-xl bg-purple-50 p-4">
-          <p className="text-sm text-gray-600">Admin labour</p>
+          <p className="text-sm text-gray-600">Admin contract labour</p>
           <p className="text-3xl font-bold text-purple-700">{sv(byGroup[0].year)}</p>
           <p className="text-xs text-gray-600">≈{sv(byGroup[0].year / 12)} / month · F27 outlook</p>
         </div>
         <div className="rounded-xl bg-cyan-50 p-4">
-          <p className="text-sm text-gray-600">Dock labour</p>
+          <p className="text-sm text-gray-600">Dock contract labour</p>
           <p className="text-3xl font-bold text-cyan-700">{sv(byGroup[1].year)}</p>
           <p className="text-xs text-gray-600">≈{sv(byGroup[1].year / 12)} / month · F27 outlook</p>
         </div>
-        <div className="rounded-xl bg-amber-50 p-4">
-          <p className="text-sm text-gray-600">Other lines (net of claims)</p>
-          <p className="text-3xl font-bold text-amber-700">{sv(byGroup[2].year)}</p>
-          <p className="text-xs text-gray-600">≈{sv(byGroup[2].year / 12)} / month · F27 outlook</p>
+        <div className="rounded-xl bg-green-50 p-4">
+          <p className="text-sm text-gray-600">Dispatcher role (confirmed)</p>
+          <p className="text-3xl font-bold text-green-700">{sv(identified || 0)}</p>
+          <p className="text-xs text-gray-600">≈{sv((identified || 0) / 12)} / month · annual value</p>
         </div>
         <div className="rounded-xl bg-gray-900 p-4 text-white">
           <p className="text-sm text-gray-300">F27 total outlook + dispatcher</p>
@@ -1985,14 +1985,14 @@ const SavingsOutlook = ({ d, identified }) => {
                       <td className={`py-1.5 text-right font-semibold ${cellTone(l.year)}`}>{sv(l.year)}</td>
                     </tr>
                   ))}
-                  <tr className="border-b border-gray-200 bg-gray-50 font-semibold">
+                  {g.ls.length > 1 && <tr className="border-b border-gray-200 bg-gray-50 font-semibold">
                     <td className="py-1.5 pr-2" colSpan={2}>
                       <span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: OUTLOOK_COLORS[g.g] }} />
                       {g.g}
                     </td>
                     <td className={`py-1.5 pr-2 text-right ${cellTone(g.year)}`}>{sv(g.year / 12)}</td>
                     <td className={`py-1.5 text-right ${cellTone(g.year)}`}>{sv(g.year)}</td>
-                  </tr>
+                  </tr>}
                 </React.Fragment>
               ))}
               {isNum(identified) && identified > 0 && (
@@ -2014,8 +2014,8 @@ const SavingsOutlook = ({ d, identified }) => {
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-lg bg-purple-50 p-4 text-sm text-purple-900">
-          <p className="font-semibold">How we hold and grow the outlook — labour</p>
-          <p className="mt-1">Hold the Jul–Aug rates: Admin agency {pct(Math.abs(lines[0].rate * 100), 0)} lower, Dock labour {pct(Math.abs((byGroup[1].ytd / sum(byGroup[1].ls.map((l) => sum(l.f26.slice(0, n))))) * 100), 0)} lower. Every extra 1% off F26 labour spend ≈ {kMoney(labourOnePct)}/yr (Admin {kMoney(onePct('Admin labour'))}, Dock {kMoney(onePct('Dock labour'))}).</p>
+          <p className="font-semibold">How we hold and grow the outlook — contract labour</p>
+          <p className="mt-1">Hold the Jul–Aug rates: Admin contract labour {pct(Math.abs(lines[0].rate * 100), 0)} lower, Dock contract labour {pct(Math.abs(lines[1].rate * 100), 0)} lower. Every extra 1% off F26 contract labour ≈ {kMoney(labourOnePct)}/yr (Admin {kMoney(onePct('Admin labour'))}, Dock {kMoney(onePct('Dock labour'))}).</p>
         </div>
         <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-semibold">{isNum(gap) ? (gap > 0 ? `Gap to target: ${money(gap)}` : 'Outlook covers the target') : 'Gap to target: needs the F27 target'}</p>
@@ -2031,7 +2031,7 @@ const SavingsOutlook = ({ d, identified }) => {
         </div>
       </div>
       <Source>
-        Outlook = each line's Jul–Aug % change vs the same months of F26, applied to the remaining F26 months (if the current rate holds). Estimates, not booked savings. Brackets = cost increase. Source: net-amount P&L pivot; claims use the claims report for August ($13,432.53). Labour outlook {sv(labourYear)} ≈ {pct(Math.abs((labourYear / (onePct('Admin labour') + onePct('Dock labour'))) ), 1)} of F26 labour spend.
+        Outlook covers the two contract labour buckets (Admin and Dock) plus the confirmed dispatcher saving: each bucket's Jul–Aug % change vs the same months of F26, applied to the remaining F26 months if the rate holds. Estimates, not booked savings. Company wages & benefits are tracked separately (Jul–Aug: Admin +12.7%, Dock −2.2%). Source: net-amount P&L pivot.
       </Source>
     </Card>
   );
