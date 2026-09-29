@@ -1,1320 +1,1626 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
-  AreaChart, Area, ComposedChart,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ReferenceLine, ReferenceArea
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, ReferenceLine, Cell, LabelList
 } from 'recharts';
-import { 
-  TrendingDown, DollarSign, Target, Award, AlertCircle, 
-  CheckCircle, Activity, Zap, ArrowRight, Calendar,
-  BarChart3, TrendingUp, Clock, Shield, Truck, FileText, Home
+import {
+  Shield, Clock, DollarSign, Target, TrendingDown, TrendingUp, CheckCircle,
+  AlertTriangle, Truck, Activity, BarChart3, Wrench, Gauge, Users, Pencil, X,
+  Copy, RotateCcw, ChevronLeft, ChevronRight, Calendar, Package, EyeOff, Zap,
+  ClipboardCheck, Home, Award
 } from 'lucide-react';
+import { DEFAULT_DATA, EDIT_SECTIONS } from './data';
+import F26Recap from './F26Recap';
 
-// Main App Component with Navigation
-const App = () => {
-  const [currentView, setCurrentView] = useState('dashboard');
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+const STORAGE_KEY = 'msa-f27-overrides-v1';
+const BANNER_KEY = 'msa-f27-hide-banner-v1';
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <div className="bg-white shadow-lg sticky top-0 z-20 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-6">
-              <h1 className="text-xl font-bold text-gray-800">Mississauga Terminal</h1>
-              <nav className="flex gap-4">
-                <button
-                  onClick={() => setCurrentView('dashboard')}
-                  className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
-                    currentView === 'dashboard' 
-                      ? 'bg-purple-100 text-purple-700 font-medium' 
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => setCurrentView('executive')}
-                  className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
-                    currentView === 'executive' 
-                      ? 'bg-purple-100 text-purple-700 font-medium' 
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  Executive Summary
-                </button>
-              </nav>
-            </div>
-          </div>
-        </div>
-      </div>
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+const allNum = (...vs) => vs.every(isNum);
+const sum = (vs) => vs.filter(isNum).reduce((a, b) => a + b, 0);
 
-      {/* Content */}
-      {currentView === 'dashboard' && <MississaugaTerminalDashboard />}
-      {currentView === 'executive' && <ExecutiveSummary />}
+const getIn = (obj, path) =>
+  path.split('.').reduce((o, k) => (o === null || o === undefined ? undefined : o[k]), obj);
+
+const setIn = (obj, keys, value) => {
+  const [k, ...rest] = keys;
+  const base = obj === null || obj === undefined ? {} : obj;
+  const clone = Array.isArray(base) ? [...base] : { ...base };
+  clone[k] = rest.length ? setIn(base[k], rest, value) : value;
+  return clone;
+};
+
+const applyOverrides = (base, overrides) =>
+  Object.entries(overrides).reduce((acc, [path, v]) => setIn(acc, path.split('.'), v), base);
+
+const readStore = (key, fallback) => {
+  try {
+    const v = window.localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+};
+const writeStore = (key, v) => {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(v));
+  } catch (e) {
+    /* storage unavailable — edits stay for this session only */
+  }
+};
+
+const money = (v, d = 0) =>
+  `${v < 0 ? '−' : ''}$${Math.abs(v).toLocaleString('en-CA', { minimumFractionDigits: d, maximumFractionDigits: d })}`;
+const num = (v, d = 0) =>
+  `${v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('en-CA', { minimumFractionDigits: d, maximumFractionDigits: d })}`;
+const pct = (v, d = 1) => `${v < 0 ? '−' : ''}${Math.abs(v).toFixed(d)}%`;
+const signed = (v, fmt) => (v > 0 ? `+${fmt(v)}` : fmt(v));
+const kMoney = (v) => (Math.abs(v) >= 1e6 ? `$${(v / 1e6).toFixed(2)}M` : `$${(v / 1000).toFixed(1)}K`);
+
+// Fiscal-year progress (F27 = Jul 1, 2026 – Jun 30, 2027)
+const fiscalProgress = () => {
+  const start = new Date(2026, 6, 1);
+  const end = new Date(2027, 5, 30);
+  const now = new Date();
+  const total = Math.round((end - start) / 86400000) + 1;
+  const day = Math.min(total, Math.max(1, Math.floor((now - start) / 86400000) + 1));
+  return { day, total, pct: (day / total) * 100 };
+};
+
+// ---------------------------------------------------------------------------
+// Derived metrics — everything calculated from the data file lives here
+// ---------------------------------------------------------------------------
+const derive = (d) => {
+  const o = d.ots;
+  const otsUnadj = allNum(o.onTimeFbs, o.totalFbs) && o.totalFbs > 0 ? (o.onTimeFbs / o.totalFbs) * 100 : null;
+  const otsAdj = allNum(o.adjLates, o.totalFbs) && o.totalFbs > 0 ? ((o.totalFbs - o.adjLates) / o.totalFbs) * 100 : null;
+  const codeRows = Object.entries(o.codes).map(([code, count]) => ({
+    code,
+    count,
+    pct: allNum(count, o.unadjLates) && o.unadjLates > 0 ? (count / o.unadjLates) * 100 : null,
+  }));
+
+  const s = d.sca;
+  const cppPctOfTarget = allNum(s.costPerProMtd, s.costPerProTarget) ? (s.costPerProMtd / s.costPerProTarget) * 100 : null;
+  const cppUnder = allNum(s.costPerProMtd, s.costPerProTarget) ? s.costPerProTarget - s.costPerProMtd : null;
+  // Report colour bands: ≤95% green · 95–100% amber (watch) · >100% red
+  const cppTone = !isNum(cppPctOfTarget) ? 'gray' : cppPctOfTarget <= 95 ? 'green' : cppPctOfTarget <= 100 ? 'amber' : 'red';
+  const cppBelowTargetValue = allNum(cppUnder, s.fbCountMtd) ? cppUnder * s.fbCountMtd : null;
+  const delta = (a, b) => (allNum(a, b) ? { abs: a - b, pct: b !== 0 ? ((a - b) / b) * 100 : null } : null);
+  const labour = {
+    total: delta(s.f27TotalCost, s.f26TotalCost),
+    agency: delta(s.f27AgencyCost, s.f26AgencyCost),
+    company: delta(s.f27CompanyCost, s.f26CompanyCost),
+  };
+  const hoursDelta = {
+    total: delta(s.f27Hours, s.f26Hours),
+    agency: delta(s.f27AgencyHours, s.f26AgencyHours),
+    company: delta(s.f27CompanyHours, s.f26CompanyHours),
+  };
+  const wdPctUsed = allNum(s.f27Hours, s.wdAllowable) && s.wdAllowable > 0 ? (s.f27Hours / s.wdAllowable) * 100 : null;
+  const cdPctUsed = allNum(s.f27Hours, s.cdAllowable) && s.cdAllowable > 0 ? (s.f27Hours / s.cdAllowable) * 100 : null;
+  const monthPctUsed = allNum(s.f27Hours, s.scaTargetHours) && s.scaTargetHours > 0 ? (s.f27Hours / s.scaTargetHours) * 100 : null;
+  const wdElapsedPct = allNum(s.wdMtd, s.wdMonth) && s.wdMonth > 0 ? (s.wdMtd / s.wdMonth) * 100 : null;
+  const hoursUnder = allNum(s.wdAllowable, s.f27Hours) ? s.wdAllowable - s.f27Hours : null;
+  const hoursUnderValue = allNum(hoursUnder, d.productivity.f27.hourlyRate) ? hoursUnder * d.productivity.f27.hourlyRate : null;
+  // Pace: MTD hours scaled to the full month on working days
+  const paceHours = allNum(s.f27Hours, s.wdMtd, s.wdMonth) && s.wdMtd > 0 ? (s.f27Hours / s.wdMtd) * s.wdMonth : null;
+  const paceReduction = allNum(s.f26Hours, paceHours) ? s.f26Hours - paceHours : null;
+  const paceVsReductionTarget = allNum(paceReduction, s.hourReductionTarget) && s.hourReductionTarget > 0 ? (paceReduction / s.hourReductionTarget) * 100 : null;
+
+  const initAnnual = sum(d.initiatives.map((i) => i.annual));
+  const initYtd = sum(d.initiatives.map((i) => i.ytd));
+  const initHasAnnual = d.initiatives.some((i) => isNum(i.annual));
+  const initHasYtd = d.initiatives.some((i) => isNum(i.ytd));
+
+  const p27 = d.productivity.f27;
+  const p26 = d.productivity.f26;
+  const pphVsLy = delta(p27.pph, p26.pph);
+  const pphVsGoal = delta(p27.pph, p27.pphGoal);
+  const uphVsLy = delta(p27.unitsPerHr, p26.unitsPerHr);
+  const rateVsLy = delta(p27.hourlyRate, p26.hourlyRate);
+  const cwtVsLy = delta(p27.cwt, p26.cwt);
+  const weightVsLy = delta(p27.weight, p26.weight);
+  const lbsPerUnitF26 = allNum(p26.pph, p26.unitsPerHr) && p26.unitsPerHr > 0 ? p26.pph / p26.unitsPerHr : null;
+  // Units-basis value: hours the F27 units would have needed at F26 units/hr, minus actual hours
+  const hoursAtF26Rate = allNum(p27.units, p26.unitsPerHr) && p26.unitsPerHr > 0 ? p27.units / p26.unitsPerHr : null;
+  const hoursAvoided = allNum(hoursAtF26Rate, p27.hours) ? hoursAtF26Rate - p27.hours : null;
+  const hoursAvoidedValue = allNum(hoursAvoided, p27.hourlyRate) ? hoursAvoided * p27.hourlyRate : null;
+  // Cost per unit — use costs ÷ units when both are known, otherwise the dashboard value
+  const cpu27 = allNum(p27.costs, p27.units) && p27.units > 0 ? p27.costs / p27.units : p27.cpu;
+  const cpu26 = allNum(p26.costs, p26.units) && p26.units > 0 ? p26.costs / p26.units : p26.cpu;
+  const cpuVsLy = delta(cpu27, cpu26);
+  const cpuSavings = allNum(cpu26, cpu27, p27.units) ? (cpu26 - cpu27) * p27.units : null;
+  const unitsVsLy = delta(p27.units, p26.units);
+
+  const c = d.cico;
+  const cicoHours = sum(c.weeks.map((w) => w.hoursSaved));
+  const cicoHasHours = c.weeks.some((w) => isNum(w.hoursSaved));
+  const cicoWeeksWithData = c.weeks.filter((w) => isNum(w.hoursSaved)).length;
+  const cicoValue = cicoHasHours && isNum(c.avgHourlyRate) ? cicoHours * c.avgHourlyRate : null;
+  const cicoAnnualized =
+    cicoHasHours && isNum(c.avgHourlyRate) && cicoWeeksWithData > 0
+      ? (cicoHours / cicoWeeksWithData) * 52 * c.avgHourlyRate
+      : null;
+
+  const repairs = d.terminal.repairs.filter((r) => r.item && String(r.item).trim());
+  const repairCost = sum(repairs.map((r) => r.estCost));
+
+  const missing = EDIT_SECTIONS.flatMap((sec) => sec.fields)
+    .filter((fl) => fl.type === 'number')
+    .filter((fl) => !fl.path.startsWith('terminal.repairs') && !fl.path.startsWith('f26.'))
+    .filter((fl) => !isNum(getIn(d, fl.path))).length;
+
+  return {
+    otsUnadj, otsAdj, codeRows, cppPctOfTarget, cppUnder, cppTone, cppBelowTargetValue, labour,
+    hoursDelta, wdPctUsed, cdPctUsed, monthPctUsed, wdElapsedPct, hoursUnder, hoursUnderValue,
+    paceHours, paceReduction, paceVsReductionTarget,
+    initAnnual, initYtd, initHasAnnual, initHasYtd,
+    pphVsLy, pphVsGoal, uphVsLy, rateVsLy, cwtVsLy, weightVsLy, lbsPerUnitF26,
+    hoursAtF26Rate, hoursAvoided, hoursAvoidedValue,
+    cpu27, cpu26, cpuVsLy, cpuSavings, unitsVsLy,
+    cicoHours, cicoHasHours, cicoValue, cicoAnnualized,
+    repairs, repairCost, missing,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Small UI building blocks
+// ---------------------------------------------------------------------------
+const Tbc = ({ small }) => (
+  <span
+    className={`inline-flex items-center rounded-md border border-amber-300 bg-amber-100 font-semibold text-amber-700 ${
+      small ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-0.5 text-base'
+    }`}
+    title="Value not entered yet — click Edit data"
+  >
+    TBC
+  </span>
+);
+
+const V = ({ v, fmt = (x) => x, small }) =>
+  v === null || v === undefined || v === '' || (typeof v === 'number' && !Number.isFinite(v)) ? (
+    <Tbc small={small} />
+  ) : (
+    <>{fmt(v)}</>
+  );
+
+const TONES = {
+  gray: 'bg-gray-100 text-gray-700',
+  green: 'bg-green-100 text-green-700',
+  red: 'bg-red-100 text-red-700',
+  purple: 'bg-purple-100 text-purple-700',
+  blue: 'bg-blue-100 text-blue-700',
+  amber: 'bg-amber-100 text-amber-700',
+};
+
+const Chip = ({ tone = 'gray', children }) => (
+  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${TONES[tone]}`}>
+    {children}
+  </span>
+);
+
+const Kpi = ({ icon: Icon, label, value, sub, tone = 'purple', footer }) => (
+  <div className="flex flex-col gap-2 rounded-xl bg-white p-5 shadow-lg">
+    <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
+      {Icon && (
+        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${TONES[tone]}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+      )}
+      {label}
     </div>
+    <div className="text-3xl font-bold text-gray-900">{value}</div>
+    {sub && <div className="text-sm text-gray-500">{sub}</div>}
+    {footer && <div className="mt-1 border-t border-gray-100 pt-2">{footer}</div>}
+  </div>
+);
+
+const Card = ({ title, subtitle, icon: Icon, children, className = '', right }) => (
+  <div className={`rounded-xl bg-white p-6 shadow-lg ${className}`}>
+    {(title || right) && (
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h3 className="flex items-center gap-2 text-lg font-bold text-gray-800">
+            {Icon && <Icon className="h-5 w-5 text-purple-600" />}
+            {title}
+          </h3>
+          {subtitle && <p className="mt-0.5 text-sm text-gray-500">{subtitle}</p>}
+        </div>
+        {right}
+      </div>
+    )}
+    {children}
+  </div>
+);
+
+const Bullets = ({ items, icon: Icon = CheckCircle, color = 'text-green-600' }) => (
+  <ul className="space-y-3">
+    {items.filter(Boolean).map((t, i) => (
+      <li key={i} className="flex gap-3 text-gray-700">
+        <Icon className={`mt-0.5 h-5 w-5 flex-shrink-0 ${color}`} />
+        <span>{t}</span>
+      </li>
+    ))}
+  </ul>
+);
+
+const EmptyChart = ({ height = 260, label = 'Enter data to populate this chart' }) => (
+  <div
+    style={{ height }}
+    className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50 text-sm text-amber-700"
+  >
+    <Pencil className="h-5 w-5" />
+    {label}
+    <span className="text-xs text-amber-600">Click “Edit data” in the top bar</span>
+  </div>
+);
+
+const Source = ({ children }) => <p className="mt-3 text-xs italic text-gray-500">{children}</p>;
+
+const PageHeader = ({ eyebrow, title, subtitle, icon: Icon, right }) => (
+  <div className="mb-8 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 p-8 text-white shadow-xl">
+    <div className="flex flex-wrap items-start justify-between gap-6">
+      <div className="max-w-4xl">
+        <p className="text-sm font-semibold uppercase tracking-wider text-purple-300">{eyebrow}</p>
+        <h2 className="mt-1 flex items-center gap-3 text-3xl font-bold">
+          {Icon && <Icon className="h-8 w-8" />}
+          {title}
+        </h2>
+        {subtitle && <p className="mt-2 text-lg opacity-90">{subtitle}</p>}
+      </div>
+      {right}
+    </div>
+  </div>
+);
+
+const Delta = ({ d, goodWhen = 'up', fmtAbs, digits = 1 }) => {
+  if (!d) return <Tbc small />;
+  const good = goodWhen === 'up' ? d.abs >= 0 : d.abs <= 0;
+  const Icon = d.abs >= 0 ? TrendingUp : TrendingDown;
+  return (
+    <span className={`inline-flex items-center gap-1 font-semibold ${good ? 'text-green-600' : 'text-red-600'}`}>
+      <Icon className="h-4 w-4" />
+      {fmtAbs ? signed(d.abs, fmtAbs) : null}
+      {isNum(d.pct) && <span>{fmtAbs ? ` (${signed(d.pct, (x) => pct(x, digits))})` : signed(d.pct, (x) => pct(x, digits))}</span>}
+    </span>
   );
 };
 
-// Enhanced Dashboard Component
-const MississaugaTerminalDashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
+const tooltipStyle = { borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' };
 
-  // Core financial metrics - enhanced with precision
-  const financialMetrics = useMemo(() => ({
-    f25Actual: 3868598,
-    f26Target: 3482009,
-    reduction: 386589,
-    reductionPercent: 10.0,
-    cwtReduction: 0.30,
-    contractLabourSavings: 341153,
-    contractLabourPercent: 88.2,
-    f25CargoClaims: 134483,
-    cargoClaimsTarget10: 13448,  // 10% reduction
-    cargoClaimsTarget20: 26897   // additional 20% reduction
-  }), []);
+// ---------------------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------------------
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: Home },
+  { id: 'safety', label: 'Safety', icon: Shield },
+  { id: 'service', label: 'Service', icon: Clock },
+  { id: 'sca', label: 'SCA & Savings', icon: DollarSign },
+  { id: 'productivity', label: 'Productivity', icon: Gauge },
+  { id: 'terminal', label: 'Terminal', icon: Wrench },
+  { id: 'f26', label: 'F26 Recap', icon: Calendar },
+];
 
-  // Monthly performance data with COS phases
-  const performanceData = [
-    { month: 'Jul-24', revenue: 3007111, costRatio: 58.82, contractLabour: 274677, phase: 'pre-cos', phaseLabel: 'Baseline' },
-    { month: 'Aug-24', revenue: 2465966, costRatio: 58.29, contractLabour: 201283, phase: 'pre-cos', phaseLabel: 'Baseline' },
-    { month: 'Sep-24', revenue: 2284660, costRatio: 62.84, contractLabour: 226503, phase: 'cos-prep', phaseLabel: 'Go-Live Delayed' },
-    { month: 'Oct-24', revenue: 2337900, costRatio: 60.02, contractLabour: 161825, phase: 'cos-prep', phaseLabel: 'Go-Live Delayed' },
-    { month: 'Nov-24', revenue: 2207045, costRatio: 76.12, contractLabour: 455763, phase: 'cos-deploy', phaseLabel: 'Official Go-Live' },
-    { month: 'Dec-24', revenue: 1950229, costRatio: 74.98, contractLabour: 321978, phase: 'cos-deploy', phaseLabel: 'Peak Challenge' },
-    { month: 'Jan-25', revenue: 1960049, costRatio: 73.83, contractLabour: 266885, phase: 'cos-deploy', phaseLabel: 'Stabilization' },
-    { month: 'Feb-25', revenue: 1759701, costRatio: 60.79, contractLabour: 199896, phase: 'cos-deploy', phaseLabel: 'Breakthrough' },
-    { month: 'Mar-25', revenue: 2345998, costRatio: 53.10, contractLabour: 217315, phase: 'post-cos', phaseLabel: 'Excellence' },
-    { month: 'Apr-25', revenue: 2776961, costRatio: 54.55, contractLabour: 265701, phase: 'post-cos', phaseLabel: 'Optimized' },
-    { month: 'May-25', revenue: 3116511, costRatio: 55.30, contractLabour: 344407, phase: 'post-cos', phaseLabel: 'Sustained' },
-    { month: 'Jun-25', revenue: 3001933, costRatio: 55.78, contractLabour: 308331, phase: 'post-cos', phaseLabel: 'New Normal' }
+// --- Overview --------------------------------------------------------------
+const OverviewTab = ({ d, x, go }) => {
+  const fp = fiscalProgress();
+  const p27 = d.productivity.f27;
+  const agenda = [
+    { id: 'safety', icon: Shield, title: 'Safety', text: 'Current TRIR, what we do every shift, and what we are adding in F27.' },
+    { id: 'service', icon: Clock, title: 'Service', text: 'OTS and late codes, plus scanning compliance by trip type.' },
+    { id: 'sca', icon: DollarSign, title: 'SCA & Savings', text: 'Cost per PRO vs target and the F27 cost take-out plan.' },
+    { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, load factor and CICO hours saved.' },
+    { id: 'terminal', icon: Wrench, title: 'Physical Terminal', text: 'Condition of the building and urgent repairs.' },
   ];
-
-  // Calculated metrics with memoization for performance
-  const derivedMetrics = useMemo(() => {
-    const preCOSAvg = 58.55;
-    const postCOSAvg = 54.68;
-    const improvement = ((preCOSAvg - postCOSAvg) / preCOSAvg * 100).toFixed(1);
-    
-    // Calculate average post-COS monthly revenue
-    const postCOSMonths = performanceData.filter(m => m.phase === 'post-cos');
-    const avgPostCOSRevenue = postCOSMonths.reduce((sum, m) => sum + m.revenue, 0) / postCOSMonths.length;
-    
-    // Monthly operational savings from efficiency gain
-    const monthlySavings = (preCOSAvg - postCOSAvg) / 100 * avgPostCOSRevenue;
-    
-    // Implementation cost recovery period (not traditional ROI)
-    const recoveryMonths = Math.ceil(financialMetrics.contractLabourSavings / monthlySavings);
-    
-    return {
-      preCOSAvg,
-      postCOSAvg,
-      improvement,
-      monthlySavings: Math.round(monthlySavings),
-      recoveryMonths,
-      implementationCost: financialMetrics.contractLabourSavings
-    };
-  }, [financialMetrics, performanceData]);
-
-  // Savings breakdown with visual hierarchy - corrected amounts
-  const savingsBreakdown = [
-    { category: 'Dock Contract Workers', amount: 178829, percentage: 41.9, color: '#8b5cf6', icon: Activity },
-    { category: 'Admin Contract Workers', amount: 162324, percentage: 38.0, color: '#06b6d4', icon: BarChart3 },
-    { category: 'Shunting Optimization', amount: 31800, percentage: 7.4, color: '#f59e0b', icon: Truck },
-    { category: 'Forklift Rentals', amount: 25000, percentage: 5.9, color: '#10b981', icon: Zap },
-    { category: 'Garbage Disposal', amount: 15600, percentage: 3.7, color: '#ef4444', icon: AlertCircle },
-    { category: 'Cargo Claims (10% reduction)', amount: 13448, percentage: 3.1, color: '#ec4899', icon: Shield }
-  ];
-  
-  const totalIdentifiedSavings = savingsBreakdown.reduce((sum, item) => sum + item.amount, 0);
-
-  // Phase performance metrics
-  const phaseMetrics = {
-    preCOS: { avgCostRatio: 58.55, months: 'Jul-Aug 2024', color: '#6b7280', label: 'Baseline Performance' },
-    training: { avgCostRatio: 61.43, months: 'Sep-Oct 2024', color: '#f59e0b', label: 'Training & Delays' },
-    deployment: { avgCostRatio: 71.43, months: 'Nov 2024-Feb 2025', color: '#ef4444', label: 'Live Implementation' },
-    postCOS: { avgCostRatio: 54.68, months: 'Mar-Jun 2025', color: '#10b981', label: 'New Excellence' }
-  };
-
-  // Implementation timeline
-  const implementationTimeline = [
-    { date: 'Sep 2024', event: 'COS Training Begins - Staff prepared for new system while go-live date kept getting postponed', impact: 'neutral' },
-    { date: 'Oct 2024', event: 'Continued Training - Teams maintained readiness despite ongoing delays and uncertainty', impact: 'neutral' },
-    { date: 'Nov 2024', event: 'Official Go-Live - System finally launched, costs spiked to 76.12% as expected', impact: 'negative' },
-    { date: 'Feb 2025', event: 'Breakthrough Achieved - Team mastery improved, costs dropped significantly', impact: 'positive' },
-    { date: 'Mar 2025', event: 'Excellence Realized - Achieved 53.10% cost ratio, best in terminal history', impact: 'positive' },
-    { date: 'Jul 2025', event: 'F26 Launch - All initiatives implementing ($427K), planning 10% above target', impact: 'future' },
-    { date: 'Q2 F26', event: 'Optional Initiative Assessment - Security optimization ($91K) available if needed', impact: 'future' }
-  ];
-
-  // Custom tooltip for financial data - enhanced
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-xl">
-          <p className="font-semibold text-gray-800">{label}</p>
-          {data.phaseLabel && <p className="text-sm text-gray-600 mb-2">{data.phaseLabel}</p>}
-          {payload.map((entry, index) => (
-            <p key={index} className="text-sm">
-              <span style={{ color: entry.color }}>{entry.name}: </span>
-              <span className="font-medium">
-                {entry.name.includes('$') || entry.name.includes('Labour') || entry.name.includes('Revenue')
-                  ? `$${entry.value.toLocaleString()}` 
-                  : entry.name.includes('%') || entry.name.includes('Ratio')
-                  ? `${entry.value}%`
-                  : entry.value.toLocaleString()}
-              </span>
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  // Tab content renderer
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return (
-          <>
-            {/* Executive Context Section */}
-            <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl shadow-xl p-8 mb-8 text-white">
-              <div className="max-w-4xl">
-                <h2 className="text-2xl font-bold mb-4 flex items-center gap-3">
-                  <Activity className="w-8 h-8" />
-                  Executive Summary
-                </h2>
-                <p className="text-lg leading-relaxed opacity-95">
-                  Following a successful Core Operating System (COS) deployment that temporarily increased costs during implementation, 
-                  the Mississauga Terminal has achieved <span className="font-bold text-green-400">best-in-class operational efficiency</span>. 
-                  We have identified <span className="font-bold text-yellow-400">${totalIdentifiedSavings.toLocaleString()}</span> in 
-                  sustainable cost reduction initiatives for Fiscal 2026, <span className="font-bold text-green-400">${(totalIdentifiedSavings - financialMetrics.reduction).toLocaleString()} above our $386,589 target (110% of target)</span>.
-                </p>
-                <div className="mt-4 flex items-center gap-4 text-sm opacity-80">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>F25: July 2024 - June 2025</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>F26: July 2025 - June 2026</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Key Metrics Grid - Enhanced with better data */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-              {/* F26 Target */}
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-green-600 p-4">
-                  <div className="flex items-center justify-between">
-                    <Target className="w-8 h-8 text-white opacity-90" />
-                    <span className="text-sm font-medium text-white opacity-90">PLANNED</span>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <p className="text-sm text-gray-600 mb-1">F26 Identified Savings</p>
-                  <p className="text-3xl font-bold text-gray-900">${totalIdentifiedSavings.toLocaleString()}</p>
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-xs text-gray-500">Reduction target</p>
-                    <p className="text-sm font-semibold text-gray-700">$386,589</p>
-                    <p className="text-xs text-green-600 font-medium mt-1">+${(totalIdentifiedSavings - financialMetrics.reduction).toLocaleString()} (110% of target)</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contract Labour Savings */}
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-purple-600 p-4">
-                  <div className="flex items-center justify-between">
-                    <Activity className="w-8 h-8 text-white opacity-90" />
-                    <span className="text-sm font-medium text-white opacity-90">79.9% OF PLAN</span>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <p className="text-sm text-gray-600 mb-1">Contract Labour Optimization</p>
-                  <p className="text-3xl font-bold text-gray-900">${financialMetrics.contractLabourSavings.toLocaleString()}</p>
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-xs text-gray-500">Implementation approach:</p>
-                    <p className="text-sm font-semibold text-gray-700">Maintain post-COS efficiency</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Efficiency Achievement */}
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-green-600 p-4">
-                  <div className="flex items-center justify-between">
-                    <TrendingUp className="w-8 h-8 text-white opacity-90" />
-                    <span className="text-sm font-medium text-white opacity-90">CURRENT</span>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="text-center mb-4">
-                    <p className="text-sm text-gray-600 mb-1">Operational Efficiency Gain</p>
-                    <p className="text-4xl font-bold text-green-600">{derivedMetrics.improvement}%</p>
-                  </div>
-                  <div className="bg-gradient-to-r from-gray-50 to-green-50 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 text-center mb-3 font-medium">Cost-to-Revenue Ratio Improvement</p>
-                    <div className="flex items-center justify-center gap-3">
-                      <div className="text-center bg-white rounded-lg px-4 py-2 shadow-sm">
-                        <p className="text-xs text-gray-500 font-medium">PRE</p>
-                        <p className="text-xl font-bold text-gray-700">{derivedMetrics.preCOSAvg}%</p>
-                      </div>
-                      <TrendingDown className="w-6 h-6 text-green-500" />
-                      <div className="text-center bg-white rounded-lg px-4 py-2 shadow-sm">
-                        <p className="text-xs text-gray-500 font-medium">POST</p>
-                        <p className="text-xl font-bold text-green-600">{derivedMetrics.postCOSAvg}%</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Implementation Cost Recovery */}
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-blue-600 p-4">
-                  <div className="flex items-center justify-between">
-                    <Clock className="w-8 h-8 text-white opacity-90" />
-                    <span className="text-sm font-medium text-white opacity-90">RECOVERY</span>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <p className="text-sm text-gray-600 mb-1">Implementation Cost Recovery</p>
-                  <p className="text-3xl font-bold text-gray-900">{derivedMetrics.recoveryMonths} months</p>
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-xs text-gray-500">Monthly operational savings</p>
-                    <p className="text-sm font-semibold text-gray-700">${derivedMetrics.monthlySavings.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500 mt-2">From 6.6% efficiency gain</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Contract Labour Savings Summary */}
-            <div className="bg-amber-50 border-l-4 border-amber-500 rounded-r-lg p-6 mb-8">
-              <div className="flex items-center gap-3">
-                <Activity className="w-6 h-6 text-amber-600 flex-shrink-0" />
-                <div>
-                  <p className="font-semibold text-gray-900 mb-1">Implementation Cost: $341,153</p>
-                  <p className="text-sm text-gray-700">
-                    The excess contract labour costs during COS deployment (Sep 2024 - Feb 2025) represent our one-time implementation investment. 
-                    With our terminal now operating 6.6% more efficiently, we're realizing ~$109K in monthly operational savings - 
-                    meaning the implementation cost is recovered in just 4 months through improved performance.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Performance Journey - FIXED CHART */}
-            <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">COS Implementation Journey & Cost Performance</h2>
-                <p className="text-sm text-gray-600 mt-1">Monthly cost-to-revenue ratio showing the investment phase and payoff</p>
-                <p className="text-xs text-gray-500 mt-2">
-                  Note: Revenue fluctuates with freight volume (CWT). As volume increases, both revenue and costs typically rise together, 
-                  which is why cost-to-revenue ratio is our key efficiency metric.
-                </p>
-              </div>
-              
-              {/* Go-Live Context Box */}
-              <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-semibold text-amber-800 mb-1">Implementation Context</p>
-                    <p className="text-amber-700">Sep-Oct 2024: Multiple go-live postponements created a costly cycle of ramping up contract staff for training, then releasing them when dates were pushed. This pattern repeated several times, significantly increasing our contract labour burn rate before the system finally launched in November 2024.</p>
-                  </div>
-                </div>
-              </div>
-              
-              <ResponsiveContainer width="100%" height={440}>
-                <ComposedChart 
-                  data={performanceData} 
-                  margin={{ top: 50, right: 150, bottom: 60, left: 80 }}
-                >
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1}/>
-                    </linearGradient>
-                    <pattern id="diagonalHatch" patternUnits="userSpaceOnUse" width="4" height="4">
-                      <path d="M 0,4 l 4,-4 M -1,1 l 2,-2 M 3,5 l 2,-2" stroke="#f59e0b" strokeWidth="0.5" opacity="0.3"/>
-                    </pattern>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey="month" 
-                    angle={-45} 
-                    textAnchor="end" 
-                    height={60}
-                    interval={0}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis 
-                    yAxisId="left" 
-                    domain={[45, 80]} 
-                    label={{ 
-                      value: 'Cost Ratio %', 
-                      angle: -90, 
-                      position: 'insideLeft',
-                      offset: 20,
-                      style: { fontSize: 14, textAnchor: 'middle' }
-                    }}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis 
-                    yAxisId="right" 
-                    orientation="right" 
-                    label={{ 
-                      value: 'Revenue ($)', 
-                      angle: 90, 
-                      position: 'insideRight',
-                      offset: 20,
-                      style: { fontSize: 14, textAnchor: 'middle' }
-                    }}
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(value) => `${(value/1000000).toFixed(1)}M`}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend 
-                    verticalAlign="top" 
-                    height={36}
-                    iconType="rect"
-                    wrapperStyle={{ paddingTop: '10px' }}
-                  />
-                  {/* Target zone */}
-                  <ReferenceArea yAxisId="left" y1={50} y2={60} fill="#10b981" fillOpacity={0.1} />
-                  {/* Training period with uncertainty */}
-                  <ReferenceArea yAxisId="left" x1="Sep-24" x2="Oct-24" fill="url(#diagonalHatch)" stroke="#f59e0b" strokeWidth={1} strokeDasharray="3 3" />
-                  {/* Actual COS deployment period */}
-                  <ReferenceArea yAxisId="left" x1="Nov-24" x2="Feb-25" fill="#ef4444" fillOpacity={0.1} stroke="#ef4444" strokeWidth={2} />
-                  <ReferenceLine 
-                    yAxisId="left" 
-                    y={55} 
-                    stroke="#10b981" 
-                    strokeDasharray="5 5" 
-                    strokeWidth={2} 
-                    label={{ 
-                      value: "Target Zone", 
-                      position: "insideTopRight",
-                      offset: 5,
-                      style: { fontSize: 12, fill: '#10b981' }
-                    }} 
-                  />
-                  <Area 
-                    yAxisId="right" 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    fill="url(#colorRevenue)" 
-                    stroke="#8b5cf6"
-                    name="Revenue ($)"
-                  />
-                  <Line 
-                    yAxisId="left" 
-                    type="monotone" 
-                    dataKey="costRatio" 
-                    stroke="#374151"
-                    strokeWidth={3}
-                    name="Cost Ratio %"
-                    dot={(props) => {
-                      const { cx, cy, payload } = props;
-                      let fill = '#6b7280'; // gray for pre-COS
-                      let r = 5;
-                      let strokeWidth = 1;
-                      
-                      if (payload.phase === 'cos-prep') {
-                        fill = '#f59e0b'; // orange for preparation/training
-                        r = 5;
-                      } else if (payload.phase === 'cos-deploy') {
-                        fill = '#ef4444'; // red for deployment
-                        r = 6;
-                      } else if (payload.phase === 'post-cos') {
-                        fill = '#10b981'; // green for post-COS
-                        r = 5;
-                      }
-                      
-                      // Special markers
-                      if (payload.month === 'Nov-24') {
-                        // Official go-live marker
-                        return (
-                          <g>
-                            <circle cx={cx} cy={cy} r={12} fill={fill} fillOpacity={0.2} />
-                            <circle cx={cx} cy={cy} r={8} fill={fill} stroke="#fff" strokeWidth={2} />
-                            <text x={cx+20} y={cy+30} textAnchor="middle" fontSize="11" fill={fill} fontWeight="bold">GO LIVE</text>
-                          </g>
-                        );
-                      }
-                      if (payload.month === 'Sep-24' || payload.month === 'Oct-24') {
-                        // Training period with uncertainty
-                        strokeWidth = 2;
-                      }
-                      return <circle cx={cx} cy={cy} r={r} fill={fill} stroke="#fff" strokeWidth={strokeWidth} />;
-                    }}
-                    activeDot={{ r: 8 }}
-                  />
-                  <Bar 
-                    yAxisId="right" 
-                    dataKey="contractLabour" 
-                    fill="#06b6d4" 
-                    opacity={0.6} 
-                    name="Contract Labour ($)"
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-              
-              {/* Phase indicators */}
-              <div className="mt-2 space-y-2">
-                <div className="flex items-center justify-center gap-4 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gray-500 rounded-full"></div>
-                    <span className="text-sm font-medium">Pre-COS Baseline</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-orange-50 rounded-lg border border-orange-300">
-                    <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
-                    <span className="text-sm font-medium">Training (Go-Live Delayed)</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-red-50 rounded-lg border border-red-300">
-                    <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                    <span className="text-sm font-medium">COS Live Operations</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                    <span className="text-sm font-medium">Post-COS Excellence</span>
-                  </div>
-                </div>
-                <p className="text-center text-sm text-gray-600 italic">
-                  Sep-Oct: Training costs incurred while go-live dates were pushed | Nov: Official launch triggered peak disruption | Mar onwards: Excellence achieved
-                </p>
-              </div>
-            </div>
-
-            {/* Savings Composition - Enhanced with better visualization */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold text-gray-800">F26 Savings Plan: ${totalIdentifiedSavings.toLocaleString()}</h2>
-                  <p className="text-sm text-gray-600 mt-1">${(totalIdentifiedSavings - financialMetrics.reduction).toLocaleString()} above our $386,589 target</p>
-                  <div className="mt-2 p-2 bg-green-50 rounded-lg inline-block">
-                    <p className="text-xs font-medium text-green-800">110% of target identified</p>
-                  </div>
-                </div>
-                <ResponsiveContainer width="100%" height={340}>
-                  <PieChart>
-                    <Pie
-                      data={savingsBreakdown}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="amount"
-                      label={({ percentage }) => `${percentage}%`}
-                    >
-                      {savingsBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="mt-6 space-y-3">
-                  {savingsBreakdown.map((item, index) => {
-                    const Icon = item.icon;
-                    return (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${item.color}20` }}>
-                            <Icon className="w-5 h-5" style={{ color: item.color }} />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-800">{item.category}</p>
-                            <p className="text-xs text-gray-500">
-                              {item.category.includes('Contract') ? 'Maintain current efficiency' : 
-                               item.category === 'Cargo Claims (10% reduction)' ? `Reduce from $134K to $121K` :
-                               item.category === 'Shunting Optimization' ? 'Schedule optimization' :
-                               item.category === 'Garbage Disposal' ? 'Adjust schedule frequency' :
-                               'Operational optimization'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900">${item.amount.toLocaleString()}</p>
-                          <p className="text-sm text-gray-600">{item.percentage}%</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold text-gray-800">The Transformation Journey</h2>
-                  <p className="text-sm text-gray-600 mt-1">From implementation challenge to operational excellence</p>
-                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                    <p className="text-xs text-blue-800">
-                      <strong>Cost-to-Revenue Ratio:</strong> The percentage of revenue consumed by operating costs. 
-                      Maintaining our current efficiency levels will enable us to reach our F26 reduction goals.
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  {Object.entries(phaseMetrics).map(([phase, metrics], index) => {
-                    const phaseDescriptions = {
-                      preCOS: 'Standard operations before system change',
-                      training: 'Staff prepared while go-live was delayed',
-                      deployment: 'System went live with expected disruption',
-                      postCOS: 'Achieved best efficiency in terminal history'
-                    };
-                    
-                    return (
-                      <div key={phase} className="relative">
-                        {index < Object.keys(phaseMetrics).length - 1 && (
-                          <div className="absolute left-5 top-10 bottom-0 w-0.5 bg-gray-300"></div>
-                        )}
-                        <div className="flex items-start gap-4">
-                          <div 
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold relative z-10"
-                            style={{ backgroundColor: metrics.color }}
-                          >
-                            {index + 1}
-                          </div>
-                          <div className="flex-1 pb-6">
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <h3 className="font-semibold text-gray-800">{metrics.label || phase}</h3>
-                                <span className="text-xs text-gray-500">{metrics.months}</span>
-                              </div>
-                              <p className="text-sm text-gray-600 mb-2">{phaseDescriptions[phase]}</p>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">Average Cost Ratio:</span>
-                                <span className="text-lg font-bold" style={{ color: metrics.color }}>
-                                  {metrics.avgCostRatio}%
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Line Summary */}
-            <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl shadow-xl p-8 text-white">
-              <div className="max-w-4xl mx-auto text-center">
-                <h2 className="text-2xl font-bold mb-4">The Bottom Line</h2>
-                <p className="text-lg leading-relaxed">
-                  The COS implementation cost us $341,153 in excess contract labour due to multiple go-live delays and the necessary dual operations period. 
-                  However, we've emerged with <span className="font-bold">permanently improved efficiency</span> - now operating 6.6% better than pre-COS baseline. 
-                  This translates to ~$109K in monthly operational savings. We're identifying <span className="font-bold text-yellow-300">${totalIdentifiedSavings.toLocaleString()}</span> in 
-                  F26 initiatives, <span className="font-bold">10% above our target</span>, with an optional $91K security initiative providing additional cushion.
-                </p>
-                <div className="mt-6 inline-flex items-center gap-2 bg-white/20 px-6 py-3 rounded-full">
-                  <CheckCircle className="w-6 h-6" />
-                  <span className="font-semibold">All initiatives launching July 2025</span>
-                </div>
-              </div>
-            </div>
-          </>
-        );
-
-      case 'timeline':
-        return (
-          <div className="space-y-8">
-            {/* Timeline Overview */}
-            <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-xl shadow-xl p-8 text-white">
-              <h2 className="text-2xl font-bold mb-4">Implementation Journey</h2>
-              <p className="text-lg opacity-95">
-                From go-live delays to operational excellence: How we transformed a challenging 
-                implementation into best-in-class performance.
-              </p>
-            </div>
-
-            {/* PERFORMANCE TIMELINE - FIXED CHART */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold mb-6 text-gray-800">Monthly Performance Metrics</h2>
-              <p className="text-sm text-gray-600 mb-4">Cost ratio and contract labour trends throughout the journey</p>
-              
-              <ResponsiveContainer width="100%" height={400}>
-                <ComposedChart 
-                  data={performanceData}
-                  margin={{ top: 50, right: 150, bottom: 60, left: 80 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey="month" 
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                    interval={0}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis 
-                    yAxisId="left" 
-                    domain={[45, 80]} 
-                    label={{ 
-                      value: 'Cost Ratio %', 
-                      angle: -90, 
-                      position: 'insideLeft',
-                      offset: 20,
-                      style: { fontSize: 14, textAnchor: 'middle' }
-                    }}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis 
-                    yAxisId="right" 
-                    orientation="right" 
-                    label={{ 
-                      value: 'Contract Labour ($)', 
-                      angle: 90, 
-                      position: 'insideRight',
-                      offset: 20,
-                      style: { fontSize: 14, textAnchor: 'middle' }
-                    }}
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(value) => `${(value/1000).toFixed(0)}K`}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend 
-                    verticalAlign="top"
-                    height={36}
-                    iconType="rect"
-                  />
-                  <ReferenceLine 
-                    yAxisId="left" 
-                    y={55} 
-                    stroke="#10b981" 
-                    strokeDasharray="5 5" 
-                    strokeWidth={2} 
-                    label={{ 
-                      value: "Target Zone",
-                      position: "insideTopRight",
-                      offset: 5,
-                      style: { fontSize: 12, fill: '#10b981' }
-                    }}
-                  />
-                  <Bar 
-                    yAxisId="right" 
-                    dataKey="contractLabour" 
-                    fill="#8b5cf6" 
-                    opacity={0.7} 
-                    name="Contract Labour ($)"
-                  />
-                  <Line 
-                    yAxisId="left" 
-                    type="monotone" 
-                    dataKey="costRatio" 
-                    stroke="#ef4444" 
-                    strokeWidth={3} 
-                    name="Cost Ratio %"
-                    dot={{ r: 5 }}
-                    activeDot={{ r: 7 }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-              
-              {/* Monthly summary cards */}
-              <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500 uppercase">Pre-COS Average</p>
-                  <p className="text-lg font-bold text-gray-900">{derivedMetrics.preCOSAvg}%</p>
-                  <p className="text-sm text-gray-600">Cost Ratio</p>
-                </div>
-                <div className="p-4 bg-red-50 rounded-lg">
-                  <p className="text-xs text-gray-500 uppercase">Peak Impact</p>
-                  <p className="text-lg font-bold text-red-600">76.12%</p>
-                  <p className="text-sm text-gray-600">Nov 2024</p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <p className="text-xs text-gray-500 uppercase">Current State</p>
-                  <p className="text-lg font-bold text-green-600">{derivedMetrics.postCOSAvg}%</p>
-                  <p className="text-sm text-gray-600">Post-COS</p>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-gray-500 uppercase">Improvement</p>
-                  <p className="text-lg font-bold text-blue-600">{derivedMetrics.improvement}%</p>
-                  <p className="text-sm text-gray-600">Better</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Implementation Timeline */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold mb-8 text-gray-800">Key Milestones & Events</h2>
-              <div className="relative">
-                {implementationTimeline.map((item, index) => (
-                  <div key={index} className="flex items-start mb-8 last:mb-0">
-                    {/* Timeline line */}
-                    {index < implementationTimeline.length - 1 && (
-                      <div className="absolute left-6 top-12 bottom-0 w-0.5 bg-gray-300"></div>
-                    )}
-                    
-                    {/* Icon */}
-                    <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-lg ${
-                      item.impact === 'negative' ? 'bg-red-100 ring-4 ring-red-50' : 
-                      item.impact === 'positive' ? 'bg-green-100 ring-4 ring-green-50' : 
-                      item.impact === 'future' ? 'bg-blue-100 ring-4 ring-blue-50' : 
-                      'bg-gray-100 ring-4 ring-gray-50'
-                    }`}>
-                      {item.impact === 'negative' ? <AlertCircle className="w-6 h-6 text-red-600" /> :
-                       item.impact === 'positive' ? <CheckCircle className="w-6 h-6 text-green-600" /> :
-                       item.impact === 'future' ? <Zap className="w-6 h-6 text-blue-600" /> :
-                       <Clock className="w-6 h-6 text-gray-600" />}
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="ml-6 flex-1">
-                      <div className={`p-6 rounded-xl ${
-                        item.impact === 'negative' ? 'bg-red-50 border border-red-200' : 
-                        item.impact === 'positive' ? 'bg-green-50 border border-green-200' : 
-                        item.impact === 'future' ? 'bg-blue-50 border border-blue-200' : 
-                        'bg-gray-50 border border-gray-200'
-                      }`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-bold text-gray-800 text-lg">{item.date}</p>
-                          {item.impact === 'future' && (
-                            <span className="text-xs font-medium bg-blue-100 text-blue-700 px-3 py-1 rounded-full">F26</span>
-                          )}
-                        </div>
-                        <p className="text-gray-700">{item.event}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Learning Curve Visualization - FIXED CHART */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Team Efficiency Learning Curve</h2>
-                <p className="text-sm text-gray-600 mt-1">How our team adapted and excelled through the COS transition</p>
-              </div>
-              <ResponsiveContainer width="100%" height={360}>
-                <AreaChart 
-                  data={[
-                    { period: 'Pre-COS', efficiency: 85, fill: '#6b7280' },
-                    { period: 'Sep-24', efficiency: 75, fill: '#f59e0b' },
-                    { period: 'Oct-24', efficiency: 70, fill: '#f59e0b' },
-                    { period: 'Nov-24', efficiency: 45, fill: '#ef4444' },
-                    { period: 'Dec-24', efficiency: 50, fill: '#ef4444' },
-                    { period: 'Jan-25', efficiency: 55, fill: '#f59e0b' },
-                    { period: 'Feb-25', efficiency: 70, fill: '#f59e0b' },
-                    { period: 'Mar-25', efficiency: 90, fill: '#10b981' },
-                    { period: 'Apr-25', efficiency: 93, fill: '#10b981' },
-                    { period: 'May-25', efficiency: 94, fill: '#10b981' },
-                    { period: 'Jun-25', efficiency: 95, fill: '#10b981' }
-                  ]}
-                  margin={{ top: 20, right: 40, bottom: 60, left: 60 }}
-                >
-                  <defs>
-                    <linearGradient id="colorEfficiency" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey="period" 
-                    angle={-45} 
-                    textAnchor="end" 
-                    height={60}
-                    interval={0}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis 
-                    domain={[0, 100]}
-                    tick={{ fontSize: 11 }}
-                    label={{
-                      value: 'Efficiency %',
-                      angle: -90,
-                      position: 'insideLeft',
-                      offset: 10,
-                      style: { fontSize: 14, textAnchor: 'middle' }
-                    }}
-                  />
-                  <Tooltip formatter={(value) => `${value}%`} />
-                  <Area 
-                    type="monotone" 
-                    dataKey="efficiency" 
-                    stroke="#10b981" 
-                    fill="url(#colorEfficiency)" 
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-              
-              {/* Key Insights */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Training Period</p>
-                  <p className="text-xs text-gray-600">Efficiency declined from 85% to 70% as teams juggled training with go-live delays</p>
-                </div>
-                <div className="p-4 bg-red-50 rounded-lg">
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Go-Live Impact</p>
-                  <p className="text-xs text-gray-600">November saw 45% efficiency - expected disruption from dual operations</p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Excellence Achieved</p>
-                  <p className="text-xs text-gray-600">Steady improvement from 90% (Mar) to 95% (Jun) - exceeding pre-COS baseline</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'initiatives':
-        return (
-          <div className="space-y-8">
-            {/* Initiative Overview */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl shadow-xl p-8 text-white">
-              <h2 className="text-2xl font-bold mb-4">F26 Cost Reduction Strategy</h2>
-              <p className="text-lg opacity-95">
-                Six core initiatives launching July 2025, identifying <span className="font-bold text-yellow-300">${totalIdentifiedSavings.toLocaleString()}</span> in savings - 
-                <span className="font-bold text-green-300"> 10% above our target</span>. An optional $91K security initiative provides additional flexibility.
-              </p>
-            </div>
-
-            {/* F26 Initiative Details */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold mb-2 text-gray-800">Cost Reduction Initiatives</h2>
-              <p className="text-gray-600 mb-6">Core initiatives launching July 2025 - already exceeding target by ${(totalIdentifiedSavings - financialMetrics.reduction).toLocaleString()}</p>
-              
-              <div className="space-y-4">
-                {[
-                  { 
-                    name: 'Dock Contract Labour Optimization', 
-                    amount: 178829, 
-                    status: 'maintaining', 
-                    description: 'Maintain post-COS efficiency levels',
-                    detail: 'Continue using optimized staffing model proven successful Mar-Jun 2025'
-                  },
-                  { 
-                    name: 'Admin Contract Labour Optimization', 
-                    amount: 162324, 
-                    status: 'maintaining', 
-                    description: 'Sustain current performance benchmarks',
-                    detail: 'Lock in administrative efficiency gains achieved through COS tools'
-                  },
-                  { 
-                    name: 'Shunting Optimization', 
-                    amount: 31800, 
-                    status: 'new', 
-                    description: 'Schedule optimization and reduction of hours',
-                    detail: 'Streamline shunting schedules and reduce operational hours based on actual demand patterns'
-                  },
-                  { 
-                    name: 'Cargo Claims Reduction', 
-                    amount: 13448, 
-                    status: 'new', 
-                    description: '10% reduction from F25 baseline',
-                    detail: `Reduce claims from $${financialMetrics.f25CargoClaims.toLocaleString()} to $${(financialMetrics.f25CargoClaims - 13448).toLocaleString()} through enhanced handling procedures`
-                  },
-                  { 
-                    name: 'Forklift Rental Reduction', 
-                    amount: 25000, 
-                    status: 'new', 
-                    description: 'Return 2 rental units',
-                    detail: 'Optimize equipment utilization to eliminate need for 2 rental forklifts'
-                  },
-                  { 
-                    name: 'Garbage Disposal Optimization', 
-                    amount: 15600, 
-                    status: 'new', 
-                    description: 'Adjust schedule frequency',
-                    detail: 'Optimize waste management schedule based on actual volume needs'
-                  }
-                ].map((initiative, index) => (
-                  <div key={index} className={`p-6 rounded-xl border-2 transition-all hover:shadow-lg ${
-                    initiative.status === 'maintaining' 
-                      ? 'border-green-200 bg-gradient-to-r from-green-50 to-green-100' 
-                      : 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100'
-                  }`}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 pr-4">
-                        <h3 className="font-bold text-gray-800 text-lg mb-1">{initiative.name}</h3>
-                        <p className="text-gray-700 font-medium mb-2">{initiative.description}</p>
-                        <p className="text-sm text-gray-600">{initiative.detail}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-3xl font-bold text-gray-800">${initiative.amount.toLocaleString()}</p>
-                        <p className="text-sm text-gray-600 mt-1">{(initiative.amount / totalIdentifiedSavings * 100).toFixed(1)}% of total</p>
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium mt-3 ${
-                          initiative.status === 'maintaining' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {initiative.status === 'maintaining' ? '✓ Maintaining F25 Gains' : '→ New Initiative'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 p-6 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-semibold opacity-90">Total F26 Core Initiatives</p>
-                    <p className="text-sm opacity-70 mt-1">Exceeding reduction target by 10%</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-4xl font-bold">${totalIdentifiedSavings.toLocaleString()}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <CheckCircle className="w-5 h-5 text-green-400" />
-                      <p className="text-sm opacity-90">Target: $386,589</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Optional Security Initiative */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Optional F26 Initiative</h2>
-                <p className="text-sm text-gray-600 mt-1">Additional opportunity providing further cushion above target</p>
-              </div>
-              
-              <div className="p-6 border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 pr-4">
-                    <h3 className="font-bold text-gray-800 text-xl mb-2">Security Guard Hours Reduction</h3>
-                    <p className="text-gray-700 font-medium mb-2">Comprehensive security coverage optimization</p>
-                    <p className="text-sm text-gray-600 mb-4">Full review and optimization of security coverage patterns, focusing on overnight and weekend shifts while maintaining safety standards</p>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="bg-amber-200 text-amber-800 px-3 py-1 rounded-full font-medium">Optional</span>
-                      <span className="text-gray-600">• Implementation flexibility based on Q1 assessment</span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-4xl font-bold text-amber-700">$91,000</p>
-                    <p className="text-sm text-gray-600 mt-1">Annual savings</p>
-                    <div className="mt-4 p-3 bg-white rounded-lg">
-                      <p className="text-xs text-gray-500">With this initiative:</p>
-                      <p className="text-lg font-bold text-gray-800">$518,001</p>
-                      <p className="text-xs text-green-600 font-medium">134% of target</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Additional Future Opportunities */}
-            <div className="bg-gray-50 rounded-xl p-8">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Future Enhancement Opportunities</h3>
-              <p className="text-sm text-gray-600 mb-6">Additional savings potential for F26 Q3-Q4 consideration</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-gray-800">Extended Cargo Claims Program</h4>
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">+20% reduction</span>
-                  </div>
-                  <p className="text-2xl font-bold text-purple-600 mb-1">$26,897</p>
-                  <p className="text-xs text-gray-600">Reduce claims from $121K to $94K through advanced handling protocols</p>
-                </div>
-                
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-gray-800">Operating Supplies Control</h4>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Monthly cap</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-600 mb-1">$5,418</p>
-                  <p className="text-xs text-gray-600">Implement $1,500/month spending limit with approval process</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white shadow-xl">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 tracking-tight">Mississauga Terminal</h1>
-              <p className="text-xl opacity-90">F26 Cost Transformation Dashboard</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm opacity-70 uppercase tracking-wider">Target Planning</p>
-              <p className="text-3xl font-bold text-green-400">110%</p>
-              <p className="text-sm opacity-70">$427,001 identified</p>
-            </div>
+    <>
+      <div className="mb-8 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 p-8 text-white shadow-xl">
+        <p className="text-sm font-semibold uppercase tracking-wider text-purple-300">
+          {d.meta.fiscalYear} Senior Leadership Review · {d.meta.presentationDate}
+        </p>
+        <h2 className="mt-2 text-4xl font-bold">{d.meta.terminal} Terminal</h2>
+        <p className="mt-3 max-w-4xl text-lg leading-relaxed opacity-95">
+          September to date the dock is running at{' '}
+          <span className="font-bold text-green-400">{isNum(x.wdPctUsed) ? `${pct(x.wdPctUsed)} of its SCA hour allowance` : 'under its SCA hour allowance'}</span>, cost per unit is{' '}
+          <span className="font-bold text-green-400">{x.cpuVsLy ? `down ${pct(Math.abs(x.cpuVsLy.pct))} vs F26` : 'down vs F26'}</span>, units per hour are{' '}
+          <span className="font-bold text-green-400">{x.uphVsLy ? `up ${pct(x.uphVsLy.pct)}` : 'up'}</span>, and overtime is only{' '}
+          <span className="font-bold text-yellow-300">{isNum(p27.otHours) ? `${num(p27.otHours)} hours` : 'minimal'}</span>. The focus for the rest of F27 is
+          closing the PPH gap to goal.
+        </p>
+        <div className="mt-6 max-w-xl">
+          <div className="mb-1 flex justify-between text-sm opacity-80">
+            <span>
+              {d.meta.fiscalYear}: {d.meta.fiscalRange}
+            </span>
+            <span>
+              Day {fp.day} of {fp.total} · {fp.pct.toFixed(0)}%
+            </span>
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-white/20">
+            <div className="h-full rounded-full bg-purple-400" style={{ width: `${fp.pct}%` }} />
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white shadow-lg sticky top-0 z-10 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex space-x-0">
+      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <Kpi
+          icon={Shield}
+          tone="blue"
+          label="Safety · TRIR F27 YTD"
+          value={<V v={d.safety.trirF27Ytd} fmt={(v) => num(v, 2)} />}
+          sub={<>Target <V v={d.safety.trirTarget} fmt={(v) => num(v, 2)} small /> · F26 <V v={d.safety.trirF26} fmt={(v) => num(v, 2)} small /></>}
+        />
+        <Kpi
+          icon={Clock}
+          tone="purple"
+          label={`Service · OTS adjusted (${d.ots.period})`}
+          value={<V v={x.otsAdj} fmt={(v) => pct(v, 2)} />}
+          sub={<>Unadjusted <V v={x.otsUnadj} fmt={(v) => pct(v, 2)} small /> · Target <V v={d.ots.target} fmt={(v) => pct(v, 1)} small /></>}
+        />
+        <Kpi
+          icon={DollarSign}
+          tone="green"
+          label={`SCA · Hours vs allowance (${d.sca.period})`}
+          value={<V v={x.wdPctUsed} fmt={(v) => pct(v)} />}
+          sub={<>Cost per PRO <V v={d.sca.costPerProMtd} fmt={(v) => money(v, 2)} small /> vs <V v={d.sca.costPerProTarget} fmt={(v) => money(v, 2)} small /> target</>}
+          footer={
+            isNum(x.hoursUnder) && (
+              <Chip tone={x.hoursUnder >= 0 ? 'green' : 'red'}>
+                <CheckCircle className="h-3.5 w-3.5" /> {num(Math.abs(x.hoursUnder))} hrs {x.hoursUnder >= 0 ? 'under' : 'over'} allowance
+              </Chip>
+            )
+          }
+        />
+        <Kpi
+          icon={Gauge}
+          tone="green"
+          label={`Productivity · Units per hour (${d.productivity.period})`}
+          value={<V v={p27.unitsPerHr} fmt={(v) => num(v, 1)} />}
+          sub={<>F26 <V v={d.productivity.f26.unitsPerHr} fmt={(v) => num(v, 2)} small /></>}
+          footer={x.uphVsLy && <Delta d={x.uphVsLy} goodWhen="up" />}
+        />
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <Card title="Where the F27 savings are showing up" icon={Award} className="lg:col-span-3">
+          <div className="space-y-3">
             {[
-              { id: 'overview', label: 'Executive Overview', icon: BarChart3 },
-              { id: 'timeline', label: 'Implementation Timeline', icon: Calendar },
-              { id: 'initiatives', label: 'F26 Initiatives', icon: Target }
-            ].map((tab) => (
+              {
+                show: isNum(x.hoursUnder),
+                icon: Clock,
+                title: `${isNum(x.hoursUnder) ? num(x.hoursUnder) : ''} dock hours under the SCA allowance`,
+                text: isNum(x.wdPctUsed)
+                  ? `${num(d.sca.f27Hours)} hrs used vs ${num(d.sca.wdAllowable)} allowed (${pct(x.wdPctUsed)}) — ≈${kMoney(x.hoursUnderValue || 0)} at ${money(p27.hourlyRate, 2)}/hr. On pace for ${isNum(x.paceVsReductionTarget) ? pct(x.paceVsReductionTarget, 0) : '—'} of the ${num(d.sca.hourReductionTarget || 0)}-hr reduction target.`
+                  : '',
+              },
+              {
+                show: !!x.cpuVsLy && isNum(x.cpuSavings),
+                icon: DollarSign,
+                title: `Cost per unit ${isNum(x.cpu26) ? money(x.cpu26, 2) : ''} → ${isNum(x.cpu27) ? money(x.cpu27, 2) : ''}`,
+                text: x.cpuVsLy ? `${pct(x.cpuVsLy.pct)} vs F26 — at last year's cost per unit, this month's ${num(p27.units)} units would have cost ≈${kMoney(x.cpuSavings)} more.` : '',
+              },
+              {
+                show: !!x.hoursDelta.agency && !!x.labour.agency,
+                icon: Users,
+                title: 'Agency labour down vs F26',
+                text: x.hoursDelta.agency && x.labour.agency
+                  ? `Agency hours ${num(d.sca.f26AgencyHours)} → ${num(d.sca.f27AgencyHours)} (${pct(x.hoursDelta.agency.pct)}); agency cost ${money(d.sca.f26AgencyCost)} → ${money(d.sca.f27AgencyCost)} (F26 full Sept vs F27 MTD).`
+                  : '',
+              },
+              {
+                show: isNum(x.cppPctOfTarget),
+                icon: Target,
+                title: `Cost per PRO ${isNum(d.sca.costPerProMtd) ? money(d.sca.costPerProMtd, 2) : ''} vs ${isNum(d.sca.costPerProTarget) ? money(d.sca.costPerProTarget, 2) : ''} target`,
+                text: isNum(x.cppPctOfTarget) ? `${pct(x.cppPctOfTarget)} of target — ${money(x.cppUnder, 2)} under on ${num(d.sca.fbCountMtd)} freight bills (≈${kMoney(x.cppBelowTargetValue || 0)} MTD).` : '',
+              },
+              {
+                show: isNum(p27.otHours),
+                icon: CheckCircle,
+                title: `Overtime held to ${isNum(p27.otHours) ? num(p27.otHours) : ''} hours`,
+                text: isNum(p27.otPct) ? `${pct(p27.otPct)} of dock hours in ${d.productivity.period}.` : '',
+              },
+              {
+                show: !!x.pphVsGoal,
+                icon: AlertTriangle,
+                title: 'Focus: PPH gap to goal',
+                text: x.pphVsGoal ? `PPH ${num(p27.pph)} vs ${num(p27.pphGoal)} goal (${pct(x.pphVsGoal.pct)}). Flat vs F26 on lighter freight — load factor and shift-hour alignment are the levers.` : '',
+                warn: true,
+              },
+            ]
+              .filter((r) => r.show)
+              .map((r, i) => (
+                <div key={i} className="flex gap-4 rounded-lg bg-gray-50 p-4">
+                  <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${r.warn ? TONES.amber : TONES.green}`}>
+                    <r.icon className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-gray-800">{r.title}</p>
+                    <p className="text-sm text-gray-600">{r.text}</p>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </Card>
+
+        <Card title="Agenda" icon={ClipboardCheck} className="lg:col-span-2">
+          <div className="space-y-3">
+            {agenda.map((a, i) => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative flex items-center gap-2 px-8 py-5 font-medium transition-all border-b-3 ${
-                  activeTab === tab.id
-                    ? 'text-purple-600 border-purple-600 bg-purple-50/50'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 border-transparent'
-                }`}
+                key={a.id}
+                onClick={() => go(a.id)}
+                className="flex w-full items-start gap-4 rounded-lg p-3 text-left transition-colors hover:bg-purple-50"
               >
-                <tab.icon className="w-5 h-5" />
-                {tab.label}
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600"></div>
-                )}
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 font-bold text-white">
+                  {i + 1}
+                </span>
+                <div className="flex-1">
+                  <p className="flex items-center gap-2 font-semibold text-gray-800">
+                    <a.icon className="h-4 w-4 text-purple-600" /> {a.title}
+                  </p>
+                  <p className="text-sm text-gray-600">{a.text}</p>
+                </div>
+                <ChevronRight className="mt-2 h-4 w-4 text-gray-400" />
               </button>
             ))}
           </div>
+        </Card>
+      </div>
+    </>
+  );
+};
+
+// --- Safety ----------------------------------------------------------------
+const SafetyTab = ({ d }) => {
+  const s = d.safety;
+  const trirGood = allNum(s.trirF27Ytd, s.trirTarget) ? s.trirF27Ytd <= s.trirTarget : null;
+  return (
+    <>
+      <PageHeader
+        eyebrow="1 · Safety"
+        icon={Shield}
+        title="TRIR — Total Recordable Incident Rate"
+        subtitle="Where we are today, the processes in place, and what we are adding to improve in F27."
+      />
+      <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-5">
+        <Kpi
+          icon={Shield}
+          tone={trirGood === null ? 'blue' : trirGood ? 'green' : 'red'}
+          label="TRIR F27 YTD"
+          value={<V v={s.trirF27Ytd} fmt={(v) => num(v, 2)} />}
+        />
+        <Kpi icon={Target} tone="purple" label="F27 target" value={<V v={s.trirTarget} fmt={(v) => num(v, 2)} />} />
+        <Kpi icon={Calendar} tone="gray" label="TRIR F26" value={<V v={s.trirF26} fmt={(v) => num(v, 2)} />} />
+        <Kpi icon={AlertTriangle} tone="amber" label="Recordables YTD" value={<V v={s.recordablesF27Ytd} fmt={num} />} />
+        <Kpi icon={CheckCircle} tone="green" label="Days since last recordable" value={<V v={s.daysSinceLastRecordable} fmt={num} />} />
+      </div>
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <Card title="What we do every shift" icon={ClipboardCheck}>
+          <Bullets items={s.practices} />
+        </Card>
+        <div className="space-y-8">
+          <Card title="Incident reporting & training" icon={Users}>
+            <Bullets items={s.incidentProcess} icon={CheckCircle} color="text-blue-600" />
+          </Card>
+          <Card title="New for F27" icon={Zap}>
+            <Bullets items={s.f27Plans} icon={ChevronRight} color="text-purple-600" />
+          </Card>
         </div>
       </div>
+    </>
+  );
+};
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {renderTabContent()}
+// --- Service ---------------------------------------------------------------
+const ServiceTab = ({ d, x }) => {
+  const o = d.ots;
+  const sc = d.scanning;
+  const codeData = x.codeRows.filter((r) => isNum(r.count));
+  const scanTiles = [
+    { label: 'Delivery trips', v: sc.deliveryPct, ytd: sc.deliveryFytdPct },
+    { label: 'Line haul — outbound', v: sc.lineHaulOutPct, ytd: sc.lineHaulOutFytdPct },
+    { label: 'Line haul — inbound', v: sc.lineHaulInPct },
+    { label: 'Pickup trips', v: sc.pickupPct },
+  ];
+  return (
+    <>
+      <PageHeader
+        eyebrow="2 · Service"
+        icon={Clock}
+        title="OTS — On-Time Service"
+        subtitle="Current OTS, what is driving the lates, and the plan to improve in F27."
+      />
+      <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-5">
+        <Kpi icon={Package} tone="gray" label={`Total FB's · ${o.period}`} value={<V v={o.totalFbs} fmt={num} />} />
+        <Kpi icon={CheckCircle} tone="green" label="On-time FB's" value={<V v={o.onTimeFbs} fmt={num} />} />
+        <Kpi icon={Clock} tone="purple" label="OTS unadjusted" value={<V v={x.otsUnadj} fmt={(v) => pct(v, 2)} />} sub={<>UNADJ lates <V v={o.unadjLates} fmt={num} small /></>} />
+        <Kpi
+          icon={Target}
+          tone={allNum(x.otsAdj, o.target) ? (x.otsAdj >= o.target ? 'green' : 'red') : 'purple'}
+          label="OTS adjusted"
+          value={<V v={x.otsAdj} fmt={(v) => pct(v, 2)} />}
+          sub={<>ADJ lates <V v={o.adjLates} fmt={num} small /></>}
+        />
+        <Kpi icon={Award} tone="blue" label="OTS target" value={<V v={o.target} fmt={(v) => pct(v, 1)} />} />
       </div>
 
-      {/* Footer */}
-      <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white mt-16">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <Card title="Lates by reason code" subtitle="Share of unadjusted lates" icon={BarChart3} className="lg:col-span-3">
+          {codeData.length ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={codeData} margin={{ top: 20, right: 10, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="code" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => num(v)} />
+                <Bar dataKey="count" name="Lates" radius={[4, 4, 0, 0]}>
+                  {codeData.map((r) => (
+                    <Cell key={r.code} fill={r.code === 'IN' || r.code === 'TB' ? '#9ca3af' : '#7c3aed'} />
+                  ))}
+                  <LabelList dataKey="count" position="top" style={{ fontSize: 11, fill: '#374151' }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart height={280} />
+          )}
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-gray-500">
+                  {x.codeRows.map((r) => (
+                    <th key={r.code} className="px-1 py-1 text-center font-semibold">{r.code}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {x.codeRows.map((r) => (
+                    <td key={r.code} className="px-1 py-1 text-center font-medium text-gray-800"><V v={r.count} fmt={num} small /></td>
+                  ))}
+                </tr>
+                <tr className="text-gray-500">
+                  {x.codeRows.map((r) => (
+                    <td key={r.code} className="px-1 py-1 text-center">{isNum(r.pct) ? pct(r.pct) : '—'}</td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <Source>IN = agent / beyond-carrier delays · TB = transborder delays — outside terminal control (shown in grey).</Source>
+        </Card>
+        <Card title="Plan to improve OTS" icon={Zap} className="lg:col-span-2">
+          <Bullets items={o.actions} icon={ChevronRight} color="text-purple-600" />
+        </Card>
+      </div>
+
+      <MissedPuCard m={d.missedPu} />
+
+      <Card title="Scanning compliance — freight bills scanned" subtitle={`In/out of facility · ${sc.dateRange}`} icon={Activity}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {scanTiles.map((t) => {
+            const good = isNum(t.v) ? t.v >= sc.target : null;
+            return (
+              <div key={t.label} className={`rounded-xl p-5 ${good === null ? 'bg-gray-50' : good ? 'bg-green-50' : 'bg-red-50'}`}>
+                <p className="text-sm font-medium text-gray-600">{t.label}</p>
+                <p className={`mt-1 text-4xl font-bold ${good === null ? 'text-gray-900' : good ? 'text-green-700' : 'text-red-700'}`}>
+                  <V v={t.v} fmt={(v) => pct(v, 2)} />
+                </p>
+                {'ytd' in t && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Fiscal YTD <V v={t.ytd} fmt={(v) => pct(v, 2)} small />
+                  </p>
+                )}
+                {isNum(t.v) && isNum(sc.target) && (
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+                    <div className={`h-full ${good ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, t.v)}%` }} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <Source>Target {isNum(sc.target) ? pct(sc.target, 0) : 'TBC'} of freight bills scanned. Source: Compliance Reporting — Scanning Efficiency In/Out of Terminals.</Source>
+      </Card>
+    </>
+  );
+};
+
+// --- Missed pickups (Service tab) ---------------------------------------------
+const MissedPuCard = ({ m }) => {
+  const trueMissPct =
+    allNum(m.totalMissed, m.falsePositiveCount, m.totalMeasured) && m.totalMeasured > 0
+      ? ((m.totalMissed - m.falsePositiveCount) / m.totalMeasured) * 100
+      : null;
+  const opsIssue = m.byCategory.find((c) => /^ops issue/i.test(c.label));
+  const falsePos = m.byCategory.find((c) => /false/i.test(c.label));
+  return (
+    <Card title="Missed pickups" subtitle={`Missed PU dashboard · ${m.period}`} icon={Truck} className="mb-8">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-xl bg-red-50 p-4">
+          <p className="text-sm font-medium text-gray-600">Missed PU % · all dates</p>
+          <p className="text-4xl font-bold text-red-600"><V v={m.missedPct} fmt={(v) => pct(v, 2)} /></p>
+          <p className="text-xs text-gray-500">
+            <V v={m.totalMissed} fmt={num} small /> missed of <V v={m.totalMeasured} fmt={(v) => `${num(v / 1000, 0)}K`} small /> measured
+          </p>
+        </div>
+        <div className="rounded-xl bg-green-50 p-4">
+          <p className="text-sm font-medium text-gray-600">Last 7 days (to Sep 26)</p>
+          <p className="text-4xl font-bold text-green-700"><V v={m.last7Pct} fmt={(v) => pct(v, 2)} /></p>
+          <p className="text-xs text-gray-500">Trending down from Sep MTD {isNum(m.byMonth[3] && m.byMonth[3].pct) ? pct(m.byMonth[3].pct, 2) : '—'}</p>
+        </div>
+        <div className="rounded-xl bg-amber-50 p-4">
+          <p className="text-sm font-medium text-gray-600">OPS false positives</p>
+          <p className="text-4xl font-bold text-amber-700">{falsePos ? pct(falsePos.pct) : <Tbc />}</p>
+          <p className="text-xs text-gray-500">of missed PUs — pickup was made, not closed out</p>
+        </div>
+        <div className="rounded-xl bg-gray-50 p-4">
+          <p className="text-sm font-medium text-gray-600">Excluding false positives</p>
+          <p className="text-4xl font-bold text-gray-900"><V v={trueMissPct} fmt={(v) => `≈${pct(v)}`} /></p>
+          <p className="text-xs text-gray-500">(missed − false positives) ÷ measured</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div>
+          <p className="mb-2 text-sm font-semibold text-gray-700">By month</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={m.byMonth} margin={{ top: 20, right: 5, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v, 2)} />
+              <Bar dataKey="pct" name="Missed PU %" fill="#dc2626" radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="pct" position="top" formatter={(v) => `${v}%`} style={{ fontSize: 11, fill: '#374151' }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div>
+          <p className="mb-2 text-sm font-semibold text-gray-700">Last 7 days</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={m.last7Days} margin={{ top: 20, right: 5, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v, 2)} />
+              <Bar dataKey="pct" name="Missed PU %" fill="#f87171" radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="pct" position="top" formatter={(v) => `${v}%`} style={{ fontSize: 11, fill: '#374151' }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div>
+          <p className="mb-2 text-sm font-semibold text-gray-700">Why pickups were missed</p>
+          <div className="space-y-2">
+            {m.byCategory.map((c) => (
+              <div key={c.label}>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>{c.label}</span>
+                  <span className="font-semibold">{isNum(c.count) ? `${num(c.count)} · ` : ''}{pct(c.pct)}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                  <div className={`h-full ${/false/i.test(c.label) ? 'bg-amber-500' : /ops/i.test(c.label) ? 'bg-red-500' : 'bg-gray-400'}`} style={{ width: `${c.pct}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mb-1 mt-4 text-xs font-semibold uppercase text-gray-500">Top reasons</p>
+          <ul className="space-y-1 text-sm text-gray-700">
+            {m.topReasons.map((r) => (
+              <li key={r.label} className="flex justify-between">
+                <span>{r.label}</span>
+                <span className="font-semibold">{num(r.count)} ({pct(r.pct)})</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">What the data says</p>
+          <p className="mt-1">
+            Only {opsIssue ? pct(opsIssue.pct, 0) : '—'} of missed pickups are true OPS issues. {falsePos ? pct(falsePos.pct, 0) : '—'} are OPS false positives
+            ({m.topReasons[0] ? `${pct(m.topReasons[0].pct, 0)} coded “${m.topReasons[0].label.toLowerCase()}”` : ''}) — a close-out and scanning fix, not a service failure.
+          </p>
+          <p className="mt-2 text-xs text-amber-800">{m.notes.join(' ')}</p>
+        </div>
+        <div>
+          <Bullets items={m.actions} icon={ChevronRight} color="text-purple-600" />
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+// --- SCA & Savings ---------------------------------------------------------
+const ScaTab = ({ d, x }) => {
+  const s = d.sca;
+  const hoursData = [
+    { period: 'F26 Sept', Company: s.f26CompanyHours, Agency: s.f26AgencyHours },
+    { period: 'F27 Sept MTD', Company: s.f27CompanyHours, Agency: s.f27AgencyHours },
+  ];
+  const hoursReady = allNum(s.f26CompanyHours, s.f26AgencyHours, s.f27CompanyHours, s.f27AgencyHours);
+  const labourData = [
+    { period: 'F26 Sept', Company: s.f26CompanyCost, Agency: s.f26AgencyCost },
+    { period: 'F27 Sept MTD', Company: s.f27CompanyCost, Agency: s.f27AgencyCost },
+  ];
+  const labourReady = allNum(s.f26CompanyCost, s.f26AgencyCost, s.f27CompanyCost, s.f27AgencyCost);
+  const shifts = [
+    { label: 'Days', v: s.shiftHours.days },
+    { label: 'Afternoons', v: s.shiftHours.afternoon },
+    { label: 'Midnights', v: s.shiftHours.midnight },
+  ];
+  const coverage = x.initHasAnnual && isNum(s.f27SavingsTarget) && s.f27SavingsTarget > 0 ? (x.initAnnual / s.f27SavingsTarget) * 100 : null;
+  const statusTone = (st) => (/new/i.test(st) ? 'blue' : /sustain/i.test(st) ? 'green' : 'purple');
+  const cppLabel = { green: 'On target', amber: 'Under target — watch', red: 'Over target', gray: '' }[x.cppTone];
+  const periodNote = `F26 = full September 2025 · F27 = September MTD (${isNum(s.wdMtd) ? s.wdMtd : '—'} of ${isNum(s.wdMonth) ? s.wdMonth : '—'} working days)`;
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="3 · SCA"
+        icon={DollarSign}
+        title="SCA — Hours, Cost per PRO & F27 Take-Out"
+        subtitle={`Current status against target and the plan to achieve — and over-achieve — the F27 cost take-out target. Mississauga · updated for ${s.updatedFor}.`}
+        right={
+          isNum(x.wdPctUsed) && (
+            <div className="text-right">
+              <p className="text-sm uppercase tracking-wider opacity-70">SCA hour allowance used</p>
+              <p className={`text-4xl font-bold ${x.wdPctUsed <= 100 ? 'text-green-400' : 'text-red-400'}`}>{pct(x.wdPctUsed)}</p>
+              <p className="text-sm opacity-70">{s.period} · working-day basis</p>
+            </div>
+          )
+        }
+      />
+
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <Card title="Dock hours vs SCA allowance" subtitle={`${s.period} · ${isNum(s.wdMtd) ? s.wdMtd : '—'} of ${isNum(s.wdMonth) ? s.wdMonth : '—'} working days`} icon={Clock}>
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
+            <p className="text-6xl font-bold text-gray-900"><V v={s.f27Hours} fmt={num} /></p>
+            <p className="pb-2 text-gray-600">
+              hrs used of <span className="font-semibold"><V v={s.wdAllowable} fmt={num} small /></span> allowed
+            </p>
+          </div>
+          {isNum(x.wdPctUsed) && (
+            <div className="mt-4">
+              <div className="h-4 overflow-hidden rounded-full bg-gray-100">
+                <div className={`h-full rounded-full ${x.wdPctUsed <= 100 ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, x.wdPctUsed)}%` }} />
+              </div>
+              <div className="mt-1 flex justify-between text-xs text-gray-500">
+                <span>{pct(x.wdPctUsed)} of allowance used</span>
+                <span>Target {isNum(s.wdTargetPerDay) ? `${num(s.wdTargetPerDay)} hrs/day` : 'TBC'}</span>
+              </div>
+            </div>
+          )}
+          {isNum(x.hoursUnder) && (
+            <div className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 font-semibold ${x.hoursUnder >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              <CheckCircle className="h-5 w-5" />
+              {num(Math.abs(x.hoursUnder))} hrs {x.hoursUnder >= 0 ? 'under' : 'over'} allowance
+              {isNum(x.hoursUnderValue) && ` · ≈${money(Math.abs(x.hoursUnderValue))}`}
+            </div>
+          )}
+          <div className="mt-6 grid grid-cols-3 gap-3 border-t border-gray-100 pt-4">
             <div>
-              <h3 className="font-semibold mb-3 text-lg">F25 Achievement</h3>
-              <p className="text-sm opacity-80 leading-relaxed">
-                Successfully completed COS implementation, now operating with {derivedMetrics.improvement}% better efficiency than pre-COS baseline.
-              </p>
+              <p className="text-xs text-gray-500">Month SCA target</p>
+              <p className="font-bold text-gray-800"><V v={s.scaTargetHours} fmt={(v) => `${num(v)} hrs`} small /></p>
+              <p className="text-xs text-gray-500">F26 {isNum(s.f26Hours) ? num(s.f26Hours) : '—'} − {isNum(s.hourReductionTarget) ? num(s.hourReductionTarget) : '—'} reduction</p>
             </div>
             <div>
-              <h3 className="font-semibold mb-3 text-lg">Implementation Impact</h3>
-              <p className="text-sm opacity-80 leading-relaxed">
-                COS deployment cost $341,153 in implementation expenses. 
-                Now generating ~$109K monthly through 6.6% efficiency improvement.
-              </p>
+              <p className="text-xs text-gray-500">Used of month target</p>
+              <p className="font-bold text-gray-800"><V v={x.monthPctUsed} fmt={(v) => pct(v)} small /></p>
+              <p className="text-xs text-gray-500">{isNum(x.wdElapsedPct) ? `${pct(x.wdElapsedPct)} of working days gone` : ''}</p>
             </div>
             <div>
-              <h3 className="font-semibold mb-3 text-lg">Next Steps</h3>
-              <p className="text-sm opacity-80 leading-relaxed">
-                F26 initiatives ($427K) launching July 2025. 
-                Optional security initiative ($91K) available. Monthly monitoring will track performance.
+              <p className="text-xs text-gray-500">Calendar-day view</p>
+              <p className="font-bold text-gray-800"><V v={x.cdPctUsed} fmt={(v) => pct(v)} small /></p>
+              <p className="text-xs text-gray-500">of {isNum(s.cdAllowable) ? num(s.cdAllowable) : '—'} hrs allowed</p>
+            </div>
+          </div>
+          {isNum(x.paceVsReductionTarget) && (
+            <div className="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-900">
+              <span className="font-semibold">On pace:</span> ≈{num(x.paceHours)} hrs for September vs {num(s.scaTargetHours)} target — a ≈{num(x.paceReduction)}-hr reduction vs F26,{' '}
+              <span className="font-semibold">{pct(x.paceVsReductionTarget, 0)} of the {num(s.hourReductionTarget)}-hr reduction target</span> (at current pace).
+            </div>
+          )}
+        </Card>
+
+        <Card title="Cost per PRO" subtitle={`National SCA Cost-per-PRO report · ${s.updatedFor}`} icon={Target}>
+          <div className="text-center">
+            <p className="text-6xl font-bold text-gray-900"><V v={s.costPerProMtd} fmt={(v) => money(v, 2)} /></p>
+            <p className="mt-2 text-gray-600">
+              MTD vs target <span className="font-semibold"><V v={s.costPerProTarget} fmt={(v) => money(v, 2)} small /></span>
+            </p>
+            {isNum(x.cppPctOfTarget) && (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <Chip tone={x.cppTone}>{pct(x.cppPctOfTarget)} of target</Chip>
+                <Chip tone={x.cppTone}>{cppLabel}</Chip>
+              </div>
+            )}
+            {isNum(x.cppUnder) && (
+              <p className="mt-3 text-sm text-gray-600">
+                {money(Math.abs(x.cppUnder), 2)} {x.cppUnder >= 0 ? 'under' : 'over'} target on every PRO
+                {isNum(x.cppBelowTargetValue) && ` · ≈${money(Math.abs(x.cppBelowTargetValue))} MTD`}
+              </p>
+            )}
+          </div>
+          <div className="mt-6 grid grid-cols-3 gap-2 border-t border-gray-100 pt-4 text-center">
+            <div>
+              <p className="text-xs text-gray-500">FB count MTD</p>
+              <p className="font-bold text-gray-800"><V v={s.fbCountMtd} fmt={num} small /></p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Monthly dock S&B</p>
+              <p className="font-bold text-gray-800"><V v={s.monthlyDockSb} fmt={money} small /></p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Prorated S&B MTD</p>
+              <p className="font-bold text-gray-800"><V v={s.proratedSbMtd} fmt={money} small /></p>
+            </div>
+          </div>
+          <Source>Status bands in the report: ≤95% green · 95–100% amber · over 100% red. FB count = IN + OUT, calendar MTD.</Source>
+        </Card>
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <Card title="Dock hours — F26 vs F27" subtitle="Company vs agency hours" icon={Users}>
+          {hoursReady ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={hoursData} layout="vertical" margin={{ top: 10, right: 30, bottom: 0, left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                <XAxis type="number" tickFormatter={(v) => num(v)} tick={{ fontSize: 12 }} />
+                <YAxis type="category" dataKey="period" tick={{ fontSize: 12, fontWeight: 600 }} width={100} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${num(v)} hrs`} />
+                <Legend />
+                <Bar dataKey="Company" stackId="a" fill="#7c3aed" />
+                <Bar dataKey="Agency" stackId="a" fill="#06b6d4" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart height={220} />
+          )}
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {[
+              { label: 'Total hours', d: x.hoursDelta.total },
+              { label: 'Agency hours', d: x.hoursDelta.agency },
+              { label: 'Company hours', d: x.hoursDelta.company },
+            ].map((r) => (
+              <div key={r.label} className="rounded-lg bg-green-50 p-3">
+                <p className="text-xs font-medium text-gray-600">{r.label}</p>
+                <p className="text-xl font-bold text-gray-900">{r.d ? signed(r.d.abs, num) : <Tbc small />}</p>
+                {r.d && <Delta d={r.d} goodWhen="down" />}
+              </div>
+            ))}
+          </div>
+          <Source>{periodNote}.</Source>
+        </Card>
+
+        <Card title="Dock labour cost — F26 vs F27" subtitle="Company vs agency wages" icon={DollarSign}>
+          {labourReady ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={labourData} layout="vertical" margin={{ top: 10, right: 30, bottom: 0, left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                <XAxis type="number" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} tick={{ fontSize: 12 }} />
+                <YAxis type="category" dataKey="period" tick={{ fontSize: 12, fontWeight: 600 }} width={100} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(v)} />
+                <Legend />
+                <Bar dataKey="Company" stackId="a" fill="#7c3aed" />
+                <Bar dataKey="Agency" stackId="a" fill="#06b6d4" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart height={220} />
+          )}
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {[
+              { label: 'Total cost', d: x.labour.total },
+              { label: 'Agency cost', d: x.labour.agency },
+              { label: 'Company cost', d: x.labour.company },
+            ].map((r) => (
+              <div key={r.label} className="rounded-lg bg-green-50 p-3">
+                <p className="text-xs font-medium text-gray-600">{r.label}</p>
+                <p className="text-xl font-bold text-gray-900">{r.d ? signed(r.d.abs, money) : <Tbc small />}</p>
+                {r.d && <Delta d={r.d} goodWhen="down" />}
+              </div>
+            ))}
+          </div>
+          <Source>{periodNote}. Rate view below removes the partial-month effect.</Source>
+        </Card>
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <Card title="Cost per unit — the like-for-like view" icon={Package}>
+          <div className="flex items-end gap-3">
+            <p className="text-5xl font-bold text-gray-900"><V v={x.cpu27} fmt={(v) => money(v, 2)} /></p>
+            <p className="pb-1 text-gray-500">vs <V v={x.cpu26} fmt={(v) => money(v, 2)} small /> F26</p>
+          </div>
+          <div className="mt-2"><Delta d={x.cpuVsLy} goodWhen="down" fmtAbs={(v) => money(v, 2)} /></div>
+          {isNum(x.cpuSavings) && (
+            <div className="mt-4 rounded-lg bg-green-50 p-4">
+              <p className="text-sm font-medium text-green-800">Cost avoided vs F26 rate</p>
+              <p className="text-3xl font-bold text-green-700">≈{money(x.cpuSavings)}</p>
+              <p className="mt-1 text-xs text-gray-600">
+                (F26 cost per unit − F27 cost per unit) × {num(d.productivity.f27.units)} F27 units, {d.productivity.period}.
+              </p>
+            </div>
+          )}
+        </Card>
+        <Card title="Target dock hours per shift" subtitle="Shift start/end aligned to P&D activity" icon={Clock}>
+          <div className="grid grid-cols-3 gap-3">
+            {shifts.map((sh) => (
+              <div key={sh.label} className="rounded-lg bg-gray-50 p-3 text-center">
+                <p className="text-xs font-medium text-gray-500">{sh.label}</p>
+                <p className="mt-1 text-lg font-bold text-gray-900">
+                  {allNum(sh.v.low, sh.v.high) ? `${num(sh.v.low)}–${num(sh.v.high)}` : <Tbc small />}
+                </p>
+                <p className="text-xs text-gray-500">hrs / day</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-sm text-gray-600">
+            Daily SCA target: <span className="font-semibold">{isNum(s.wdTargetPerDay) ? `${num(s.wdTargetPerDay)} hrs per working day` : 'TBC'}</span>
+          </p>
+        </Card>
+        <Card title="How we are taking cost out" icon={Zap}>
+          <Bullets items={s.actions} icon={ChevronRight} color="text-purple-600" />
+        </Card>
+      </div>
+
+      <Card
+        title="F27 savings plan"
+        subtitle="Initiatives, full-year plan and realized to date"
+        icon={Target}
+        right={
+          <div className="text-right">
+            <p className="text-xs uppercase text-gray-500">F27 take-out target</p>
+            <p className="text-2xl font-bold text-gray-900"><V v={s.f27SavingsTarget} fmt={money} /></p>
+            {isNum(coverage) && <Chip tone={coverage >= 100 ? 'green' : 'amber'}>{pct(coverage, 0)} of target planned</Chip>}
+          </div>
+        }
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b-2 border-gray-200 text-left text-gray-500">
+                <th className="py-2 pr-4 font-semibold">Initiative</th>
+                <th className="py-2 pr-4 font-semibold">Status</th>
+                <th className="py-2 pr-4 text-right font-semibold">F27 plan</th>
+                <th className="py-2 pr-4 text-right font-semibold">Realized YTD</th>
+                <th className="py-2 text-right font-semibold">% realized</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.initiatives.filter((i) => i.name).map((i, idx) => (
+                <tr key={idx} className="border-b border-gray-100">
+                  <td className="py-3 pr-4 font-medium text-gray-800">{i.name}</td>
+                  <td className="py-3 pr-4"><Chip tone={statusTone(i.status || '')}>{i.status || '—'}</Chip></td>
+                  <td className="py-3 pr-4 text-right font-semibold"><V v={i.annual} fmt={money} small /></td>
+                  <td className="py-3 pr-4 text-right"><V v={i.ytd} fmt={money} small /></td>
+                  <td className="py-3 text-right text-gray-600">{allNum(i.annual, i.ytd) && i.annual > 0 ? pct((i.ytd / i.annual) * 100, 0) : '—'}</td>
+                </tr>
+              ))}
+              <tr className="bg-gray-50 font-bold">
+                <td className="py-3 pr-4" colSpan={2}>Total</td>
+                <td className="py-3 pr-4 text-right">{x.initHasAnnual ? money(x.initAnnual) : <Tbc small />}</td>
+                <td className="py-3 pr-4 text-right">{x.initHasYtd ? money(x.initYtd) : <Tbc small />}</td>
+                <td className="py-3 text-right">{x.initHasAnnual && x.initHasYtd && x.initAnnual > 0 ? pct((x.initYtd / x.initAnnual) * 100, 0) : '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </>
+  );
+};
+
+// --- Productivity ----------------------------------------------------------
+const ProductivityTab = ({ d, x }) => {
+  const P = d.productivity;
+  const p27 = P.f27;
+  const p26 = P.f26;
+  const lf = d.loadFactor;
+  const c = d.cico;
+  const pphData = [
+    { name: 'F26', value: p26.pph, fill: '#9ca3af' },
+    { name: 'F27', value: p27.pph, fill: '#7c3aed' },
+    { name: 'F27 goal', value: p27.pphGoal, fill: '#d1d5db' },
+  ].filter((r) => isNum(r.value));
+  const uphData = [
+    { name: 'F26', value: p26.unitsPerHr, fill: '#9ca3af' },
+    { name: 'F27', value: p27.unitsPerHr, fill: '#059669' },
+  ].filter((r) => isNum(r.value));
+  const lfData = lf.weeks.filter((w) => isNum(w.lfScore) || isNum(w.loadPct));
+  const cicoData = c.weeks.filter((w) => isNum(w.hoursSaved));
+  const compareRows = [
+    { label: 'Weight (lbs)', a: p27.weight, b: p26.weight, d: x.weightVsLy, fmt: num, good: 'up', note: 'F27 is MTD' },
+    { label: 'Units', a: p27.units, b: p26.units, d: x.unitsVsLy, fmt: num, good: 'up', note: 'F27 is MTD' },
+    { label: 'PPH (lbs / hr)', a: p27.pph, b: p26.pph, d: x.pphVsLy, fmt: num, good: 'up' },
+    { label: 'Units per hour', a: p27.unitsPerHr, b: p26.unitsPerHr, d: x.uphVsLy, fmt: (v) => num(v, 2), good: 'up' },
+    { label: 'Lbs per unit', a: p27.lbsPerUnit, b: x.lbsPerUnitF26, d: allNum(p27.lbsPerUnit, x.lbsPerUnitF26) ? { abs: p27.lbsPerUnit - x.lbsPerUnitF26, pct: ((p27.lbsPerUnit - x.lbsPerUnitF26) / x.lbsPerUnitF26) * 100 } : null, fmt: num, good: 'neutral', note: 'F26 = PPH ÷ units/hr' },
+    { label: 'Cost per hour', a: p27.hourlyRate, b: p26.hourlyRate, d: x.rateVsLy, fmt: (v) => money(v, 2), good: 'down' },
+    { label: 'Cost per CWT', a: p27.cwt, b: p26.cwt, d: x.cwtVsLy, fmt: (v) => money(v, 4), good: 'down' },
+    { label: 'Cost per unit', a: x.cpu27, b: x.cpu26, d: x.cpuVsLy, fmt: (v) => money(v, 2), good: 'down' },
+  ];
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="4 · Productivity"
+        icon={Gauge}
+        title="PPH, Units per Hour, Load Factor & CICO"
+        subtitle={`Terminal productivity dashboard · ${P.period} · updated for ${P.updatedFor}`}
+        right={
+          x.uphVsLy && (
+            <div className="text-right">
+              <p className="text-sm uppercase tracking-wider opacity-70">Units per hour vs F26</p>
+              <p className="text-4xl font-bold text-green-400">{signed(x.uphVsLy.pct, (v) => pct(v))}</p>
+              <p className="text-sm opacity-70">{num(p26.unitsPerHr, 2)} → {num(p27.unitsPerHr, 2)}</p>
+            </div>
+          )
+        }
+      />
+
+      <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
+        <Kpi
+          icon={Gauge}
+          tone="purple"
+          label="PPH (lbs / dock hour)"
+          value={<V v={p27.pph} fmt={num} />}
+          sub={<>F26 <V v={p26.pph} fmt={num} small /> · goal <V v={p27.pphGoal} fmt={num} small /></>}
+          footer={
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <span>vs F26 <Delta d={x.pphVsLy} goodWhen="up" /></span>
+              <span>vs goal <Delta d={x.pphVsGoal} goodWhen="up" /></span>
+            </div>
+          }
+        />
+        <Kpi
+          icon={Package}
+          tone="green"
+          label="Units per hour"
+          value={<V v={p27.unitsPerHr} fmt={(v) => num(v, 1)} />}
+          sub={<>F26 <V v={p26.unitsPerHr} fmt={(v) => num(v, 2)} small /></>}
+          footer={<Delta d={x.uphVsLy} goodWhen="up" fmtAbs={(v) => num(v, 1)} />}
+        />
+        <Kpi
+          icon={DollarSign}
+          tone="amber"
+          label="Cost per dock hour"
+          value={<V v={p27.hourlyRate} fmt={(v) => money(v, 2)} />}
+          sub={<>F26 <V v={p26.hourlyRate} fmt={(v) => money(v, 2)} small /></>}
+          footer={<Delta d={x.rateVsLy} goodWhen="down" fmtAbs={(v) => money(v, 2)} />}
+        />
+        <Kpi
+          icon={Clock}
+          tone="green"
+          label="Overtime hours"
+          value={<V v={p27.otHours} fmt={num} />}
+          sub={<><V v={p27.otPct} fmt={(v) => pct(v)} small /> of {isNum(p27.hours) ? num(p27.hours) : '—'} dock hours</>}
+        />
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <Card title="PPH — F26 vs F27 vs goal" subtitle={P.period} icon={BarChart3}>
+          {pphData.length ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={pphData} margin={{ top: 24, right: 10, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 13 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(1)}K`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => num(v)} />
+                <Bar dataKey="value" name="PPH" radius={[4, 4, 0, 0]}>
+                  {pphData.map((r) => <Cell key={r.name} fill={r.fill} />)}
+                  <LabelList dataKey="value" position="top" formatter={(v) => num(v)} style={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart />
+          )}
+          {x.pphVsGoal && (
+            <p className="mt-2 text-sm text-gray-600">
+              Gap to goal: <span className="font-semibold text-red-600">{signed(x.pphVsGoal.abs, num)} ({pct(x.pphVsGoal.pct)})</span> · hour-reduction target{' '}
+              <span className="font-semibold">{isNum(d.sca.hourReductionTarget) ? `${num(d.sca.hourReductionTarget)} hrs` : 'TBC'}</span>
+            </p>
+          )}
+        </Card>
+        <Card title="Units per hour — F26 vs F27" subtitle={P.period} icon={Package}>
+          {uphData.length ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={uphData} margin={{ top: 24, right: 10, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 13 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => num(v, 2)} />
+                <Bar dataKey="value" name="Units / hr" radius={[4, 4, 0, 0]}>
+                  {uphData.map((r) => <Cell key={r.name} fill={r.fill} />)}
+                  <LabelList dataKey="value" position="top" formatter={(v) => num(v, 2)} style={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart />
+          )}
+          {isNum(p27.lbsPerUnit) && isNum(x.lbsPerUnitF26) && (
+            <p className="mt-2 text-sm text-gray-600">
+              Freight got lighter — <span className="font-semibold">{num(x.lbsPerUnitF26)} → {num(p27.lbsPerUnit)} lbs per unit</span> — yet PPH held because the dock is moving more pieces every hour.
+            </p>
+          )}
+        </Card>
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <Card title="Cost & volume — F27 vs F26" subtitle={P.period} icon={Activity} className="lg:col-span-3">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-gray-200 text-left text-gray-500">
+                  <th className="py-2 pr-4 font-semibold">Metric</th>
+                  <th className="py-2 pr-4 text-right font-semibold">F27</th>
+                  <th className="py-2 pr-4 text-right font-semibold">F26</th>
+                  <th className="py-2 text-right font-semibold">Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compareRows.map((r) => (
+                  <tr key={r.label} className="border-b border-gray-100">
+                    <td className="py-2.5 pr-4 font-medium text-gray-800">
+                      {r.label}
+                      {r.note && <span className="ml-2 text-xs font-normal text-gray-400">{r.note}</span>}
+                    </td>
+                    <td className="py-2.5 pr-4 text-right font-semibold"><V v={r.a} fmt={r.fmt} small /></td>
+                    <td className="py-2.5 pr-4 text-right text-gray-600"><V v={r.b} fmt={r.fmt} small /></td>
+                    <td className="py-2.5 text-right">
+                      {r.good === 'neutral' ? (r.d ? <span className="font-semibold text-gray-700">{signed(r.d.pct, (v) => pct(v))}</span> : '—') : <Delta d={r.d} goodWhen={r.good} />}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Dock hours', v: p27.hours, fmt: num },
+              { label: 'Units', v: p27.units, fmt: num },
+              { label: 'Costs', v: p27.costs, fmt: money },
+              { label: 'Cost per unit', v: p27.cpu, fmt: (v) => money(v, 2) },
+            ].map((t) => (
+              <div key={t.label} className="rounded-lg bg-gray-50 p-3">
+                <p className="text-xs text-gray-500">{t.label}</p>
+                <p className="font-bold text-gray-900"><V v={t.v} fmt={t.fmt} small /></p>
+              </div>
+            ))}
+          </div>
+          <Source>Source: {d.meta.terminal} terminal productivity dashboard, updated for {P.updatedFor}. F27 September is month-to-date.</Source>
+        </Card>
+        <Card title="What it is worth" icon={DollarSign} className="lg:col-span-2">
+          <div className="space-y-4">
+            <div className="rounded-lg bg-green-50 p-4">
+              <p className="text-sm font-medium text-green-800">Hours avoided — units basis</p>
+              <p className="text-3xl font-bold text-green-700">
+                {isNum(x.hoursAvoided) ? `≈${num(x.hoursAvoided)} hrs` : <Tbc />}
+              </p>
+              <p className="text-lg font-semibold text-green-700">{isNum(x.hoursAvoidedValue) ? `≈${money(x.hoursAvoidedValue)}` : ''}</p>
+              <p className="mt-1 text-xs text-gray-600">
+                At F26's {isNum(p26.unitsPerHr) ? num(p26.unitsPerHr, 2) : '—'} units/hr, {isNum(p27.units) ? num(p27.units) : '—'} units would have needed{' '}
+                {isNum(x.hoursAtF26Rate) ? `≈${num(x.hoursAtF26Rate)}` : '—'} hrs vs {isNum(p27.hours) ? num(p27.hours) : '—'} actual, valued at{' '}
+                {isNum(p27.hourlyRate) ? money(p27.hourlyRate, 2) : '—'}/hr.
+              </p>
+            </div>
+            <div className="rounded-lg bg-amber-50 p-4">
+              <p className="text-sm font-medium text-amber-800">Still to close — PPH gap to goal</p>
+              <p className="text-3xl font-bold text-amber-700">{x.pphVsGoal ? `${signed(x.pphVsGoal.abs, num)} lbs/hr` : <Tbc />}</p>
+              <p className="mt-1 text-xs text-gray-600">
+                {isNum(p27.pphGoal) && isNum(p27.weight) && isNum(p27.hours)
+                  ? `At the ${num(p27.pphGoal)} PPH goal, ${num(p27.weight)} lbs needs ≈${num(p27.weight / p27.pphGoal)} hrs vs ${num(p27.hours)} used — ≈${num(p27.hours - p27.weight / p27.pphGoal)} hrs (≈${kMoney((p27.hours - p27.weight / p27.pphGoal) * (p27.hourlyRate || 0))}) left on the table this month.`
+                  : 'Enter PPH goal, weight and hours.'}
               </p>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-gray-700 text-center">
-            <p className="text-sm opacity-60">Fiscal 2026 Cost Transformation Program</p>
-            <p className="text-xs opacity-50 mt-1">Mississauga Terminal Operations</p>
-          </div>
-        </div>
+        </Card>
       </div>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <Card title="Load factor — weekly" subtitle={`Targets: LF score ${lf.lfTarget}% · load ${lf.loadTarget}%`} icon={Truck}>
+          {lfData.length ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={lf.weeks} margin={{ top: 20, right: 20, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis domain={[50, 100]} tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v)} />
+                <Legend />
+                <ReferenceLine y={lf.lfTarget} stroke="#7c3aed" strokeDasharray="5 5" />
+                <ReferenceLine y={lf.loadTarget} stroke="#059669" strokeDasharray="5 5" />
+                <Line type="monotone" dataKey="lfScore" name="LF score %" stroke="#7c3aed" strokeWidth={3} dot={{ r: 5 }} connectNulls />
+                <Line type="monotone" dataKey="loadPct" name="Load %" stroke="#059669" strokeWidth={3} dot={{ r: 5 }} connectNulls />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart />
+          )}
+          <table className="mt-4 w-full text-sm">
+            <tbody>
+              {lf.weeks.map((w) => (
+                <tr key={w.label} className="border-b border-gray-100">
+                  <td className="py-2 text-gray-700">{w.label}</td>
+                  <td className="py-2 text-right">LF <span className="font-semibold"><V v={w.lfScore} fmt={(v) => pct(v)} small /></span></td>
+                  <td className="py-2 text-right">Load <span className="font-semibold"><V v={w.loadPct} fmt={(v) => pct(v)} small /></span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+        <Card title="CICO — hours saved" subtitle="Clock-in / clock-out controls" icon={Clock}>
+          {cicoData.length ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={c.weeks} margin={{ top: 20, right: 10, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${num(v, 1)} hrs`} />
+                <Bar dataKey="hoursSaved" name="Hours saved" fill="#7c3aed" radius={[4, 4, 0, 0]}>
+                  <LabelList dataKey="hoursSaved" position="top" style={{ fontSize: 11, fill: '#374151' }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart height={200} />
+          )}
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="rounded-lg bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Hours saved</p>
+              <p className="text-xl font-bold text-gray-900">{x.cicoHasHours ? num(x.cicoHours, 1) : <Tbc small />}</p>
+            </div>
+            <div className="rounded-lg bg-green-50 p-3">
+              <p className="text-xs text-gray-500">$ saved</p>
+              <p className="text-xl font-bold text-green-700">{isNum(x.cicoValue) ? money(x.cicoValue) : <Tbc small />}</p>
+            </div>
+            <div className="rounded-lg bg-purple-50 p-3">
+              <p className="text-xs text-gray-500">Annualized</p>
+              <p className="text-xl font-bold text-purple-700">{isNum(x.cicoAnnualized) ? kMoney(x.cicoAnnualized) : <Tbc small />}</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Bullets items={c.drivers} icon={ChevronRight} color="text-purple-600" />
+          </div>
+          <Source>$ saved = hours × {isNum(c.avgHourlyRate) ? money(c.avgHourlyRate, 2) : 'TBC'}/hr (September cost per dock hour).</Source>
+        </Card>
+      </div>
+    </>
+  );
+};
+
+// --- Terminal --------------------------------------------------------------
+const TerminalTab = ({ d, x }) => {
+  const t = d.terminal;
+  const available = allNum(t.doorsTotal, t.doorsOutOfService) && t.doorsTotal > 0 ? ((t.doorsTotal - t.doorsOutOfService) / t.doorsTotal) * 100 : null;
+  const prTone = (p) => (/urgent/i.test(p) ? 'red' : /high/i.test(p) ? 'amber' : 'blue');
+  return (
+    <>
+      <PageHeader
+        eyebrow="5 · Physical Terminal"
+        icon={Wrench}
+        title="Status of the Physical Terminal"
+        subtitle="Review of the building and the urgent repairs required."
+      />
+      <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
+        <Kpi icon={Home} tone="gray" label="Dock doors" value={<V v={t.doorsTotal} fmt={num} />} />
+        <Kpi icon={AlertTriangle} tone="red" label="Doors out of service" value={<V v={t.doorsOutOfService} fmt={num} />} />
+        <Kpi icon={CheckCircle} tone="green" label="Door availability" value={<V v={available} fmt={(v) => pct(v)} />} />
+        <Kpi icon={DollarSign} tone="amber" label="Est. repair cost" value={x.repairs.some((r) => isNum(r.estCost)) ? money(x.repairCost) : <Tbc />} />
+      </div>
+      <Card title="Urgent repairs & capital needs" icon={Wrench}>
+        {x.repairs.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-gray-200 text-left text-gray-500">
+                  <th className="py-2 pr-4 font-semibold">Item</th>
+                  <th className="py-2 pr-4 font-semibold">Priority</th>
+                  <th className="py-2 pr-4 text-right font-semibold">Est. cost</th>
+                  <th className="py-2 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {x.repairs.map((r, i) => (
+                  <tr key={i} className="border-b border-gray-100">
+                    <td className="py-3 pr-4 font-medium text-gray-800">{r.item}</td>
+                    <td className="py-3 pr-4"><Chip tone={prTone(r.priority || '')}>{r.priority || '—'}</Chip></td>
+                    <td className="py-3 pr-4 text-right"><V v={r.estCost} fmt={money} small /></td>
+                    <td className="py-3 text-gray-600">{r.status || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyChart height={220} label="Add urgent repairs (item, priority, estimated cost, status)" />
+        )}
+      </Card>
+    </>
+  );
+};
+
+// --- F26 Recap ---------------------------------------------------------------
+const F26Tab = ({ d }) => {
+  const f = d.f26;
+  return (
+    <>
+      <PageHeader
+        eyebrow="Background"
+        icon={Calendar}
+        title="F26 Recap → F27"
+        subtitle="The F26 plan set in July 2025 (Jul 1, 2025 – Jun 30, 2026) — the baseline we are building on in F27."
+      />
+      <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
+        <Kpi icon={Calendar} tone="gray" label="F25 actual cost" value={<V v={f.f25ActualCost} fmt={money} />} />
+        <Kpi icon={Target} tone="purple" label="F26 target cost" value={<V v={f.f26TargetCost} fmt={money} />} sub={<>F26 actual <V v={f.f26ActualCost} fmt={money} small /></>} />
+        <Kpi icon={TrendingDown} tone="blue" label="Required reduction" value={<V v={f.requiredReduction} fmt={money} />} />
+        <Kpi
+          icon={CheckCircle}
+          tone="green"
+          label="F26 savings identified"
+          value={<V v={f.identifiedSavings} fmt={money} />}
+          sub={<>Actual <V v={f.f26ActualSavings} fmt={money} small /></>}
+          footer={allNum(f.identifiedSavings, f.requiredReduction) && <Chip tone="green">{pct((f.identifiedSavings / f.requiredReduction) * 100, 0)} of target</Chip>}
+        />
+      </div>
+      <F26Recap />
+    </>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Edit panel — lets the presenter fill in TBC values without touching code
+// ---------------------------------------------------------------------------
+const parseNum = (raw) => {
+  const cleaned = String(raw).replace(/[$,%\s]/g, '');
+  if (cleaned === '') return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : undefined;
+};
+
+const Field = ({ field, value, onChange }) => {
+  const [draft, setDraft] = useState(value === null || value === undefined ? '' : String(value));
+  useEffect(() => {
+    if (field.type === 'number') {
+      if (parseNum(draft) !== (value === undefined ? null : value)) setDraft(value === null || value === undefined ? '' : String(value));
+    } else if (draft !== (value || '')) {
+      setDraft(value || '');
+    }
+  }, [value]);
+  const empty = field.type === 'number' ? !isNum(value) : !value;
+  return (
+    <label className="block">
+      <span className="text-xs font-medium text-gray-600">{field.label}</span>
+      <input
+        type="text"
+        inputMode={field.type === 'number' ? 'decimal' : 'text'}
+        value={draft}
+        placeholder={field.type === 'number' ? 'TBC' : ''}
+        onChange={(e) => {
+          const raw = e.target.value;
+          setDraft(raw);
+          if (field.type === 'number') {
+            const n = parseNum(raw);
+            if (n !== undefined) onChange(field.path, n);
+          } else {
+            onChange(field.path, raw);
+          }
+        }}
+        className={`mt-1 w-full rounded-md border px-2 py-1.5 text-sm outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 ${
+          empty && field.type === 'number' ? 'border-amber-300 bg-amber-50' : 'border-gray-300'
+        }`}
+      />
+    </label>
+  );
+};
+
+const EditPanel = ({ data, onChange, onReset, onClose, missing }) => {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    const text = `export const DEFAULT_DATA = ${JSON.stringify(data, null, 2)};`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      window.prompt('Copy this and paste it over DEFAULT_DATA in src/data.js:', text);
+    }
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <aside className="relative flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-gray-800">
+              <Pencil className="h-5 w-5 text-purple-600" /> Edit data
+            </h2>
+            <p className="text-xs text-gray-500">Saves in this browser as you type · {missing} values still TBC</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Close">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+          {EDIT_SECTIONS.map((sec, i) => (
+            <details key={sec.title} open={i === 0} className="rounded-lg border border-gray-200">
+              <summary className="cursor-pointer select-none px-4 py-3 font-semibold text-gray-800">{sec.title}</summary>
+              <div className="grid grid-cols-2 gap-3 px-4 pb-4">
+                {sec.fields.map((fl) => (
+                  <div key={fl.path} className={fl.type === 'text' && /name|item|status/i.test(fl.label) ? 'col-span-2' : ''}>
+                    <Field field={fl} value={getIn(data, fl.path)} onChange={onChange} />
+                  </div>
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
+        <div className="flex gap-2 border-t border-gray-200 px-5 py-4">
+          <button onClick={copy} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-sm font-medium text-white hover:bg-purple-700">
+            <Copy className="h-4 w-4" /> {copied ? 'Copied!' : 'Copy for data.js'}
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm('Clear everything typed in this browser and go back to the values in src/data.js?')) onReset();
+            }}
+            className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <RotateCcw className="h-4 w-4" /> Reset
+          </button>
+        </div>
+      </aside>
     </div>
   );
 };
 
-// Executive Summary Component
-const ExecutiveSummary = () => {
+// ---------------------------------------------------------------------------
+// App
+// ---------------------------------------------------------------------------
+const App = () => {
+  const [tab, setTab] = useState('overview');
+  const [editing, setEditing] = useState(false);
+  const [overrides, setOverrides] = useState(() => readStore(STORAGE_KEY, {}));
+  const [hideBanner, setHideBanner] = useState(() => readStore(BANNER_KEY, false));
+
+  const data = useMemo(() => {
+    try {
+      return applyOverrides(DEFAULT_DATA, overrides);
+    } catch (e) {
+      return DEFAULT_DATA;
+    }
+  }, [overrides]);
+  const x = useMemo(() => derive(data), [data]);
+
+  const onChange = useCallback((path, value) => {
+    setOverrides((prev) => {
+      const next = { ...prev, [path]: value };
+      writeStore(STORAGE_KEY, next);
+      return next;
+    });
+  }, []);
+  const onReset = useCallback(() => {
+    setOverrides({});
+    writeStore(STORAGE_KEY, {});
+  }, []);
+
+  const go = useCallback((id) => {
+    setTab(id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+  const idx = TABS.findIndex((t) => t.id === tab);
+  const step = useCallback((dir) => go(TABS[(idx + dir + TABS.length) % TABS.length].id), [idx, go]);
+
+  // Arrow keys move between sections while presenting
+  useEffect(() => {
+    const onKey = (e) => {
+      if (editing || /input|textarea|select/i.test(e.target.tagName)) return;
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') step(1);
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') step(-1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [step, editing]);
+
   return (
-    <div className="max-w-4xl mx-auto p-8">
-      <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-        <h1 className="text-3xl font-bold mb-6">MISSISSAUGA TERMINAL</h1>
-        <h2 className="text-xl font-semibold mb-4 text-gray-700">F26 COST TRANSFORMATION EXECUTIVE SUMMARY</h2>
-        
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <p><strong>Date:</strong> July 2025</p>
-          <p><strong>Prepared for:</strong> Executive Leadership Team</p>
-          <p><strong>Subject:</strong> Achievement of $427,001 Cost Reduction (110% of Target)</p>
-        </div>
-
-        <div className="prose max-w-none">
-          <h3 className="text-2xl font-bold mt-8 mb-4">EXECUTIVE SUMMARY</h3>
-          <p className="mb-4">
-            The Mississauga Terminal has successfully identified $427,001 in annual cost reductions for Fiscal 2026, 
-            exceeding our mandated $386,589 target by 10%. This achievement leverages the operational excellence gained 
-            from our Core Operating System (COS) deployment, transforming temporary implementation costs into permanent efficiency gains.
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
-              <p className="text-sm text-gray-600">F25 Actual Costs</p>
-              <p className="text-2xl font-bold">$3,868,598</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Top bar */}
+      <div className="sticky top-0 z-30 border-b border-gray-200 bg-white shadow-lg">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="flex h-16 items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold text-gray-800">{data.meta.terminal} Terminal</h1>
+              <p className="truncate text-xs text-gray-500">
+                {data.meta.fiscalYear} Leadership Review · {data.meta.presentationDate}
+              </p>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
-              <p className="text-sm text-gray-600">F26 Target</p>
-              <p className="text-2xl font-bold">$3,482,009</p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
-              <p className="text-sm text-gray-600">Required Reduction</p>
-              <p className="text-2xl font-bold">$386,589</p>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg text-center">
-              <p className="text-sm text-gray-600">Identified Savings</p>
-              <p className="text-2xl font-bold text-green-600">$427,001</p>
-              <p className="text-xs text-green-600">110% of target</p>
+            <div className="flex items-center gap-2">
+              <button onClick={() => step(-1)} className="hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 sm:block" aria-label="Previous section">
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button onClick={() => step(1)} className="hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 sm:block" aria-label="Next section">
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setEditing(true)}
+                className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-purple-700"
+              >
+                <Pencil className="h-4 w-4" /> Edit data
+              </button>
             </div>
           </div>
-
-          <h3 className="text-2xl font-bold mt-8 mb-4">THE TRANSFORMATION STORY</h3>
-          
-          <h4 className="text-xl font-semibold mt-6 mb-3">1. The Challenge: COS Implementation</h4>
-          <p className="mb-4">
-            From September 2024 to February 2025, the Mississauga Terminal underwent a Core Operating System implementation 
-            marked by significant challenges:
-          </p>
-          <ul className="list-disc pl-6 mb-4">
-            <li><strong>Multiple Go-Live Delays:</strong> Repeated postponements created a costly cycle of hiring and releasing contract staff</li>
-            <li><strong>Peak Disruption:</strong> November 2024 saw costs spike to 76.12% (vs. 55% target) during go-live</li>
-            <li><strong>Total Implementation Cost:</strong> $341,153 in excess contract labour over 6 months</li>
-          </ul>
-
-          <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
-            <p className="font-semibold">Key Insight:</p>
-            <p>These costs were not failures but necessary investments in transformational change. 
-            The repeated delays, while expensive, ensured thorough preparation for successful adoption.</p>
-          </div>
-
-          <h4 className="text-xl font-semibold mt-6 mb-3">2. The Breakthrough: Operational Excellence</h4>
-          <p className="mb-4">Post-implementation (March-June 2025), the terminal achieved:</p>
-          <ul className="list-disc pl-6 mb-4">
-            <li><strong>Efficiency Gain:</strong> 6.6% improvement (58.55% → 54.68% cost ratio)</li>
-            <li><strong>Monthly Savings:</strong> ~$109,000 from improved operations</li>
-            <li><strong>Recovery Period:</strong> Implementation costs recovered in just 4 months</li>
-            <li><strong>Sustained Performance:</strong> 4 consecutive months at target efficiency</li>
-          </ul>
-
-          <h4 className="text-xl font-semibold mt-6 mb-3">3. The F26 Strategy: Maintaining Excellence</h4>
-          
-          <table className="w-full border-collapse mb-8">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-2 text-left">Initiative</th>
-                <th className="border p-2 text-right">Annual Savings</th>
-                <th className="border p-2 text-right">% of Total</th>
-                <th className="border p-2 text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="bg-gray-50">
-                <td className="border p-2 font-semibold" colSpan={4}>CONTRACT LABOUR EFFICIENCY (79.9%)</td>
-              </tr>
-              <tr>
-                <td className="border p-2">Dock Contract Labour</td>
-                <td className="border p-2 text-right">$178,829</td>
-                <td className="border p-2 text-right">41.9%</td>
-                <td className="border p-2">Maintain current levels</td>
-              </tr>
-              <tr>
-                <td className="border p-2">Admin Contract Labour</td>
-                <td className="border p-2 text-right">$162,324</td>
-                <td className="border p-2 text-right">38.0%</td>
-                <td className="border p-2">Maintain current levels</td>
-              </tr>
-              <tr className="bg-gray-50">
-                <td className="border p-2 font-semibold" colSpan={4}>NEW OPERATIONAL INITIATIVES (20.1%)</td>
-              </tr>
-              <tr>
-                <td className="border p-2">Shunting Optimization</td>
-                <td className="border p-2 text-right">$31,800</td>
-                <td className="border p-2 text-right">7.4%</td>
-                <td className="border p-2">Schedule optimization</td>
-              </tr>
-              <tr>
-                <td className="border p-2">Forklift Rental Reduction</td>
-                <td className="border p-2 text-right">$25,000</td>
-                <td className="border p-2 text-right">5.9%</td>
-                <td className="border p-2">Return 2 units</td>
-              </tr>
-              <tr>
-                <td className="border p-2">Garbage Disposal</td>
-                <td className="border p-2 text-right">$15,600</td>
-                <td className="border p-2 text-right">3.7%</td>
-                <td className="border p-2">Frequency adjustment</td>
-              </tr>
-              <tr>
-                <td className="border p-2">Cargo Claims (10%)</td>
-                <td className="border p-2 text-right">$13,448</td>
-                <td className="border p-2 text-right">3.1%</td>
-                <td className="border p-2">Enhanced procedures</td>
-              </tr>
-              <tr className="bg-green-100 font-semibold">
-                <td className="border p-2">TOTAL CORE INITIATIVES</td>
-                <td className="border p-2 text-right">$427,001</td>
-                <td className="border p-2 text-right">100%</td>
-                <td className="border p-2">July 2025 launch</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-            <h4 className="font-semibold text-amber-800 mb-2">Optional Initiative: Security Optimization</h4>
-            <p className="text-sm">An additional $91,000 in savings is available through comprehensive security coverage optimization. 
-            This would bring total savings to $518,001 (134% of target) if needed.</p>
-          </div>
-
-          <h3 className="text-2xl font-bold mt-8 mb-4">FINANCIAL IMPACT ANALYSIS</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="bg-blue-50 p-6 rounded-lg">
-              <h4 className="font-semibold text-blue-800 mb-3">Implementation Investment</h4>
-              <ul className="text-sm space-y-2">
-                <li>• Period: Sep 2024 - Feb 2025</li>
-                <li>• Excess costs: $341,153</li>
-                <li>• Primary driver: Go-live delays</li>
-                <li>• Peak impact: 76.12% cost ratio</li>
-              </ul>
-            </div>
-            <div className="bg-green-50 p-6 rounded-lg">
-              <h4 className="font-semibold text-green-800 mb-3">Ongoing Returns</h4>
-              <ul className="text-sm space-y-2">
-                <li>• Efficiency gain: 6.6%</li>
-                <li>• Monthly savings: ~$109,000</li>
-                <li>• Payback period: 4 months</li>
-                <li>• Annual benefit: $1.3M+</li>
-              </ul>
-            </div>
-          </div>
-
-          <h3 className="text-2xl font-bold mt-8 mb-4">RECOMMENDATION</h3>
-          <p className="mb-4">
-            The Mississauga Terminal management recommends proceeding with all identified core initiatives totaling $427,001. 
-            This plan exceeds our F26 target by 10% while maintaining operational excellence. The optional security initiative 
-            provides additional flexibility if needed.
-          </p>
-
-          <p className="mb-4">
-            Key success factors:
-          </p>
-          <ul className="list-disc pl-6 mb-4">
-            <li>79.9% of savings come from maintaining current efficiency levels (low risk)</li>
-            <li>All new initiatives have clear implementation paths</li>
-            <li>Monthly monitoring ensures performance sustainability</li>
-            <li>Optional initiatives provide cushion above target</li>
-          </ul>
-
-          <div className="bg-gray-100 p-4 rounded-lg text-center mt-8">
-            <p className="font-semibold">Status: Ready for July 2025 implementation</p>
-            <p className="text-sm text-gray-600 mt-1">110% of target identified • 4-month payback achieved • Excellence sustained</p>
-          </div>
+          <nav className="-mb-px flex gap-1 overflow-x-auto">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => go(t.id)}
+                className={`flex flex-shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  tab === t.id ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+                }`}
+              >
+                <t.icon className="h-4 w-4" />
+                {t.label}
+              </button>
+            ))}
+          </nav>
         </div>
       </div>
+
+      {/* Missing-data banner (hide it while presenting) */}
+      {x.missing > 0 && !hideBanner && (
+        <div className="border-b border-amber-200 bg-amber-50">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-2 text-sm text-amber-800">
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              {x.missing} values still show <Tbc small /> — click “Edit data” to fill them in.
+            </span>
+            <button
+              onClick={() => {
+                setHideBanner(true);
+                writeStore(BANNER_KEY, true);
+              }}
+              className="flex items-center gap-1 rounded px-2 py-1 font-medium hover:bg-amber-100"
+            >
+              <EyeOff className="h-4 w-4" /> Hide for presenting
+            </button>
+          </div>
+        </div>
+      )}
+
+      <main className="mx-auto max-w-7xl px-6 py-8">
+        {tab === 'overview' && <OverviewTab d={data} x={x} go={go} />}
+        {tab === 'safety' && <SafetyTab d={data} x={x} />}
+        {tab === 'service' && <ServiceTab d={data} x={x} />}
+        {tab === 'sca' && <ScaTab d={data} x={x} />}
+        {tab === 'productivity' && <ProductivityTab d={data} x={x} />}
+        {tab === 'terminal' && <TerminalTab d={data} x={x} />}
+        {tab === 'f26' && <F26Tab d={data} />}
+
+        {/* Section pager */}
+        <div className="mt-10 flex items-center justify-between">
+          <button onClick={() => step(-1)} className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-white hover:shadow">
+            <ChevronLeft className="h-4 w-4" /> {TABS[(idx - 1 + TABS.length) % TABS.length].label}
+          </button>
+          <span className="text-xs text-gray-400">Use ← → keys to move between sections</span>
+          <button onClick={() => step(1)} className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-white hover:shadow">
+            {TABS[(idx + 1) % TABS.length].label} <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </main>
+
+      <footer className="mt-8 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white">
+        <div className="mx-auto max-w-7xl px-6 py-8 text-center">
+          <p className="text-sm opacity-70">
+            {data.meta.terminal} Terminal · {data.meta.fiscalYear} ({data.meta.fiscalRange}) · Prepared for {data.meta.audience}
+          </p>
+        </div>
+      </footer>
+
+      {editing && <EditPanel data={data} onChange={onChange} onReset={onReset} onClose={() => setEditing(false)} missing={x.missing} />}
     </div>
   );
 };
