@@ -6,7 +6,7 @@ import {
 import {
   Shield, Clock, DollarSign, Target, TrendingDown, TrendingUp, CheckCircle,
   AlertTriangle, Truck, Activity, BarChart3, Wrench, Gauge, Users, Pencil, X,
-  Copy, RotateCcw, ChevronLeft, ChevronRight, Calendar, Package, EyeOff, Zap,
+  Copy, RotateCcw, ChevronLeft, ChevronRight, Calendar, Package, Zap,
   ClipboardCheck, Home, Award, Download
 } from 'lucide-react';
 import { DEFAULT_DATA, EDIT_SECTIONS } from './data';
@@ -16,7 +16,6 @@ import F26Recap from './F26Recap';
 // Helpers
 // ---------------------------------------------------------------------------
 const STORAGE_KEY = 'msa-f27-overrides-v1';
-const BANNER_KEY = 'msa-f27-hide-banner-v1';
 
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 const allNum = (...vs) => vs.every(isNum);
@@ -596,6 +595,63 @@ const SafetyTab = ({ d, x, onSet }) => {
           “{s.quote}”
         </blockquote>
       )}
+      <Card title="Peak ramp-up: Safety & Operations onboarding for new agency staff" subtitle="When peak needs 10% or more new temporary workers — November and spring/summer e-commerce peaks" icon={Users} className="mb-8" right={<Chip tone="green">Supported by Safety</Chip>}>
+          <p className="mt-1 text-sm text-gray-700">
+            When a peak needs 10% or more new temporary (agency) workers — the November and spring/summer e-commerce peaks — Safety and Operations onboard them together
+            across all shifts: dock workers, general labour and forklift operators. Safety is part of phasing in every new temp worker, as an added layer on
+            top of the checks operations management already does.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <div>
+              <p className="mb-2 text-sm font-semibold text-gray-700">What Safety covers with new staff</p>
+              <Bullets
+                icon={ChevronRight}
+                color="text-purple-600"
+                items={[
+                  'Safe Work Practices (SWPs) for their job.',
+                  'Lifting guidelines and techniques.',
+                  'Truck and trailer pull safety.',
+                  'Forklift safety — including the seat belt, every time.',
+                  'Right to refuse unsafe work.',
+                ]}
+              />
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-semibold text-gray-700">Check-ins — short questions and feedback</p>
+              <Bullets
+                icon={ChevronRight}
+                color="text-purple-600"
+                items={[
+                  '“Have you been wearing your seat belt getting on and off the forklift?”',
+                  '“If there is a spill, what do you do?” — stop and see the supervisor.',
+                  '“Do you know you can refuse unsafe work?”',
+                  '“Is anything slowing you down or feeling unsafe?” — feedback goes to the supervisor and the monthly safety meeting.',
+                ]}
+              />
+            </div>
+          </div>
+          <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">How the extra layer helps</p>
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <Bullets
+              icon={ChevronRight}
+              color="text-purple-600"
+              items={[
+                'New hires carry the highest injury risk, and peak puts the most of them on the floor at the busiest time.',
+                'Fresh eyes — Safety sees shortcuts that have become normal to people who work the floor every day.',
+                'One training standard on every shift, for dock, general labour and forklift operators.',
+              ]}
+            />
+            <Bullets
+              icon={ChevronRight}
+              color="text-purple-600"
+              items={[
+                'Supervisors stay focused on running peak while coaching still happens on the floor.',
+                'Spot checks coach, not discipline — habits form in the first weeks, so correcting early prevents injuries.',
+                'People who feel cared for, care — new staff see that safety is owned by operations and Safety together.',
+              ]}
+            />
+          </div>
+      </Card>
       <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-5">
         <Kpi
           icon={Shield}
@@ -631,7 +687,7 @@ const SafetyTab = ({ d, x, onSet }) => {
         </Card>
       </div>
 
-      <Card title="People-led safety — proposals to take to Safety" subtitle="Drivers, dock workers, general labour and forklift operators" icon={Truck} className="mb-8">
+      <Card title="People-led safety — proposals to take to Safety" subtitle="Driver safety reps and manager & supervisor ride-alongs" icon={Truck} className="mb-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           <div>
             <p className="text-base font-bold text-gray-800">1 · Driver safety reps</p>
@@ -688,67 +744,6 @@ const SafetyTab = ({ d, x, onSet }) => {
               Example based on {s.driverProgram.drivers} drivers — full pace = drivers ÷ 4 per quarter, split across managers and supervisors. Start with new drivers and
               lower safety scores; findings go to the monthly safety meeting.
             </p>
-          </div>
-        </div>
-        <div className="mt-8 border-t border-gray-100 pt-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-base font-bold text-gray-800">3 · Peak-period onboarding — with the Safety team</p>
-            <Chip tone="green">Supported by Safety</Chip>
-          </div>
-          <p className="mt-1 text-sm text-gray-700">
-            We ramp up temp (agency) labour for the e-commerce peaks — November and spring/summer — hiring 10–20% more staff across all shifts: dock workers,
-            general labour and forklift operators. The Safety team will be part of phasing in new temp workers, as an added layer on top of the checks
-            operations management already does.
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <div>
-              <p className="mb-2 text-sm font-semibold text-gray-700">What Safety covers with new staff</p>
-              <Bullets
-                icon={ChevronRight}
-                color="text-purple-600"
-                items={[
-                  'Safe Work Practices (SWPs) for their job.',
-                  'Lifting guidelines and techniques.',
-                  'Truck and trailer pull safety.',
-                  'Forklift safety — including the seat belt, every time.',
-                  'Right to refuse unsafe work.',
-                ]}
-              />
-            </div>
-            <div>
-              <p className="mb-2 text-sm font-semibold text-gray-700">Check-ins — short questions and feedback</p>
-              <Bullets
-                icon={ChevronRight}
-                color="text-purple-600"
-                items={[
-                  '“Have you been wearing your seat belt getting on and off the forklift?”',
-                  '“If there is a spill, what do you do?” — stop and see the supervisor.',
-                  '“Do you know you can refuse unsafe work?”',
-                  '“Is anything slowing you down or feeling unsafe?” — feedback goes to the supervisor and the monthly safety meeting.',
-                ]}
-              />
-            </div>
-          </div>
-          <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">How the extra layer helps</p>
-          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
-            <Bullets
-              icon={ChevronRight}
-              color="text-purple-600"
-              items={[
-                'New hires carry the highest injury risk, and peak puts the most of them on the floor at the busiest time.',
-                'Fresh eyes — Safety sees shortcuts that have become normal to people who work the floor every day.',
-                'One training standard on every shift, for dock, general labour and forklift operators.',
-              ]}
-            />
-            <Bullets
-              icon={ChevronRight}
-              color="text-purple-600"
-              items={[
-                'Supervisors stay focused on running peak while coaching still happens on the floor.',
-                'Spot checks coach, not discipline — habits form in the first weeks, so correcting early prevents injuries.',
-                'People who feel cared for, care — new staff see that safety is owned by operations and Safety together.',
-              ]}
-            />
           </div>
         </div>
         <Source>Proposal — to be agreed with Safety (OHS) before launch.</Source>
@@ -1604,7 +1599,7 @@ const QaTab = ({ d, x }) => {
       a: [
         'Driver safety reps: top safety-score drivers join the monthly safety meeting and speak for drivers — peers carry more weight than policy, being chosen creates ownership, and drivers raise concerns with a peer they would not raise with a manager.',
         `Manager & supervisor route ride-alongs: quarterly quota ramping ${s2rides(d)} — building to a ride-along with every driver at least once a year. Proposal to take to Safety.`,
-        'Peak-period onboarding, supported by the Safety team: for the November and spring/summer e-commerce peaks (10–20% more temp staff on every shift), Safety helps phase in new workers — SWPs, lifting technique, truck and trailer pull safety, forklift safety and seat belts, right to refuse unsafe work — with check-ins and spot checks on top of operations checks.',
+        'Peak-period onboarding, supported by the Safety team: for the November and spring/summer e-commerce peaks (10% or more new temp staff on every shift), Safety helps phase in new workers — SWPs, lifting technique, truck and trailer pull safety, forklift safety and seat belts, right to refuse unsafe work — with check-ins and spot checks on top of operations checks.',
         `“${d.safety.quote}”`,
       ],
     },
@@ -2972,7 +2967,6 @@ const App = () => {
   const [tab, setTab] = useState('overview');
   const [editing, setEditing] = useState(false);
   const [overrides, setOverrides] = useState(() => readStore(STORAGE_KEY, {}));
-  const [hideBanner, setHideBanner] = useState(() => readStore(BANNER_KEY, false));
 
   const data = useMemo(() => {
     try {
@@ -3064,27 +3058,6 @@ const App = () => {
           </nav>
         </div>
       </div>
-
-      {/* Missing-data banner (hide it while presenting) */}
-      {x.missing > 0 && !hideBanner && (
-        <div className="border-b border-amber-200 bg-amber-50">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-2 text-sm text-amber-800">
-            <span className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              {x.missing} values still show <Tbc small /> — click “Edit data” to fill them in.
-            </span>
-            <button
-              onClick={() => {
-                setHideBanner(true);
-                writeStore(BANNER_KEY, true);
-              }}
-              className="flex items-center gap-1 rounded px-2 py-1 font-medium hover:bg-amber-100"
-            >
-              <EyeOff className="h-4 w-4" /> Hide for presenting
-            </button>
-          </div>
-        </div>
-      )}
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         {tab === 'overview' && <OverviewTab d={data} x={x} go={go} />}

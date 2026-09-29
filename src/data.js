@@ -51,7 +51,7 @@ export const DEFAULT_DATA = {
       { name: 'Load securement & decking — ANCRA knock-down pallet decks and security divider deck-board kits', status: 'Planned', note: 'Second tier over short/fragile freight, loads locked in place — no freight falling when doors open (see Equipment & Terminal)' },
       { name: 'Driver safety reps — top safety-score drivers join the monthly safety meeting and speak for drivers', status: 'Planned', note: 'Proposal to take to Safety' },
       { name: 'Manager & supervisor route ride-alongs — quarterly quota, ramping up', status: 'Planned', note: 'Proposal to take to Safety' },
-      { name: 'Peak-period onboarding with the Safety team — SWP review, check-ins and spot checks for new temp (agency) staff', status: 'Planned', note: 'Supported by Safety — November and spring/summer e-commerce peaks' },
+      { name: 'Peak-period onboarding with the Safety team — SWP review, check-ins and spot checks for new temp (agency) staff', status: 'Planned', note: 'Supported by Safety — when peak needs 10% or more new temp workers (November and spring/summer e-commerce peaks)' },
       { name: 'Tailgates + safety moments after every incident (e.g. pinch points)', status: 'Active' },
       { name: 'Forklift pre/post-shift inspections by every operator', status: 'Active' },
       { name: 'No loading forklifts on straight trucks', status: 'Active' },
