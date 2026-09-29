@@ -32,10 +32,13 @@ export const DEFAULT_DATA = {
   // SAFETY — TRIR
   // --------------------------------------------------------------------------
   safety: {
-    trirF27Ytd: null,        // e.g. 2.1
-    trirF26: null,           // full-year F26 TRIR
-    trirTarget: null,        // F27 target
-    recordablesF27Ytd: null, // count of recordable incidents Jul 1 – today
+    // Management Control Report — F27 TRIR, Aug-26 · "Mississauga - Commerce Solutions"
+    trirAugMonth: 0,
+    trirF27Ytd: 0,
+    trirF26: 1.21,
+    trir12mmAvg: 1.21,
+    trirTarget: null,        // no target given
+    recordablesF27Ytd: 0,    // employee + contractor incidents YTD
     daysSinceLastRecordable: null,
     stepObservationsMtd: null,
     // Mississauga talking points (from the presenter)
@@ -457,6 +460,7 @@ export const EDIT_SECTIONS = [
       f('safety.trirF27Ytd', 'TRIR F27 YTD'),
       f('safety.trirF26', 'TRIR F26 (full year)'),
       f('safety.trirTarget', 'TRIR F27 target'),
+      f('safety.trir12mmAvg', 'TRIR 12-month avg'),
       f('safety.recordablesF27Ytd', 'Recordables F27 YTD'),
       f('safety.daysSinceLastRecordable', 'Days since last recordable'),
       f('safety.stepObservationsMtd', 'STEP observations MTD'),

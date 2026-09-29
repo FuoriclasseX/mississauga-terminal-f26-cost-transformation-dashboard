@@ -356,10 +356,10 @@ const OverviewTab = ({ d, x, go }) => {
       <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         <Kpi
           icon={Shield}
-          tone="blue"
+          tone="green"
           label="Safety · TRIR F27 YTD"
           value={<V v={d.safety.trirF27Ytd} fmt={(v) => num(v, 2)} />}
-          sub={<>Target <V v={d.safety.trirTarget} fmt={(v) => num(v, 2)} small /> · F26 <V v={d.safety.trirF26} fmt={(v) => num(v, 2)} small /></>}
+          sub={<>F26 <V v={d.safety.trirF26} fmt={(v) => num(v, 2)} small /> · 12-mo avg <V v={d.safety.trir12mmAvg} fmt={(v) => num(v, 2)} small /></>}
         />
         <Kpi
           icon={Clock}
@@ -484,7 +484,7 @@ const OverviewTab = ({ d, x, go }) => {
 // --- Safety ----------------------------------------------------------------
 const SafetyTab = ({ d }) => {
   const s = d.safety;
-  const trirGood = allNum(s.trirF27Ytd, s.trirTarget) ? s.trirF27Ytd <= s.trirTarget : null;
+  const trirGood = allNum(s.trirF27Ytd, s.trirTarget) ? s.trirF27Ytd <= s.trirTarget : allNum(s.trirF27Ytd, s.trirF26) ? s.trirF27Ytd <= s.trirF26 : null;
   return (
     <>
       <PageHeader
@@ -493,6 +493,15 @@ const SafetyTab = ({ d }) => {
         title="TRIR — Total Recordable Incident Rate"
         subtitle="Where we are today, the processes in place, and what we are adding to improve in F27."
       />
+      {isNum(s.trirF27Ytd) && s.trirF27Ytd === 0 && s.recordablesF27Ytd === 0 && (
+        <div className="mb-8 flex items-center gap-3 rounded-xl bg-green-50 p-5 text-green-900 shadow">
+          <CheckCircle className="h-6 w-6 flex-shrink-0 text-green-600" />
+          <p className="text-lg">
+            <span className="font-bold">Zero recordable incidents in F27 to date (Jul–Aug)</span> — TRIR 0.00 vs {isNum(s.trirF26) ? num(s.trirF26, 2) : '—'} in F26 (100% improvement).
+            <span className="ml-2 text-xs text-green-700">Source: Management Control Report — F27 TRIR, Aug-26.</span>
+          </p>
+        </div>
+      )}
       <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-5">
         <Kpi
           icon={Shield}
@@ -500,9 +509,9 @@ const SafetyTab = ({ d }) => {
           label="TRIR F27 YTD"
           value={<V v={s.trirF27Ytd} fmt={(v) => num(v, 2)} />}
         />
-        <Kpi icon={Target} tone="purple" label="F27 target" value={<V v={s.trirTarget} fmt={(v) => num(v, 2)} />} />
+        <Kpi icon={Target} tone="purple" label="12-month avg" value={<V v={s.trir12mmAvg} fmt={(v) => num(v, 2)} />} />
         <Kpi icon={Calendar} tone="gray" label="TRIR F26" value={<V v={s.trirF26} fmt={(v) => num(v, 2)} />} />
-        <Kpi icon={AlertTriangle} tone="amber" label="Recordables YTD" value={<V v={s.recordablesF27Ytd} fmt={num} />} />
+        <Kpi icon={AlertTriangle} tone={s.recordablesF27Ytd === 0 ? 'green' : 'amber'} label="Recordables F27 YTD" value={<V v={s.recordablesF27Ytd} fmt={num} />} />
         <Kpi icon={CheckCircle} tone="green" label="Days since last recordable" value={<V v={s.daysSinceLastRecordable} fmt={num} />} />
       </div>
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
