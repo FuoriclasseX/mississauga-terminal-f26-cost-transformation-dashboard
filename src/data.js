@@ -146,8 +146,8 @@ export const DEFAULT_DATA = {
     },
     actions: [
       'Drivers own the freight bill — ownership of the FB from inbound to delivery.',
-      'Scanning compliance checked every shift (see Scanning slide).',
-      'TF (terminal) and P&D working collectively on hand-offs.',
+      'Scanning compliance checked every shift.',
+      'Terminal and P&D teams working together on hand-offs.',
       'End-of-shift reporting on afternoons — every late coded before shift end.',
       'Partner-carrier (beyond interliner) lates reviewed weekly with the interline team — largely outside terminal control.',
     ],
@@ -297,8 +297,8 @@ export const DEFAULT_DATA = {
     actions: [
       'Weekly SCA review meetings — hours vs allowance and cost per PRO tracked every week.',
       'Shift start/end times aligned to P&D activity; agency vs D&R mix managed per shift.',
-      'Accessorial audit on freight bills (appointment, tailgate, storage, inside delivery) before invoicing.',
-      'Clock-in / clock-out (CICO) discipline — late starts, missed lunches and early-offs captured as hours saved.',
+      'Accessorials checked on freight bills (appointment, tailgate, storage, inside delivery) before invoicing.',
+      'Clock-in / clock-out (CICO) discipline — late starts, missed lunches and early-offs tracked every shift.',
     ],
   },
 
