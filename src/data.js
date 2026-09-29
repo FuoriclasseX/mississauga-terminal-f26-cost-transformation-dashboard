@@ -278,8 +278,6 @@ export const DEFAULT_DATA = {
     actions: [
       'Weekly SCA review meetings — hours vs allowance and cost per PRO tracked every week.',
       'Shift start/end times aligned to P&D activity; agency vs D&R mix managed per shift.',
-      'Consolidating large-customer freight into fewer trailers.',
-      'Demurrage and TL billing captured on every eligible shipment.',
       'Accessorial audit on freight bills (appointment, tailgate, storage, inside delivery) before invoicing.',
       'Clock-in / clock-out (CICO) discipline — late starts, missed lunches and early-offs captured as hours saved.',
     ],
@@ -444,8 +442,24 @@ export const DEFAULT_DATA = {
       { line: 'Owner operator base (dock)', f26: 30231, f27: 798, type: 'Terminal' },
       { line: 'Rentals (dock + building)', f26: 32709, f27: 1029, type: 'Terminal' },
       { line: 'Company wages, salaries & benefits', f26: 356556, f27: 365089, type: 'Terminal' },
-      { line: 'Cargo claims', f26: 24024, f27: 39087, type: 'Terminal' },
+      { line: 'Cargo claims (Aug per claims report)', f26: 24024, f27: 38651, type: 'Terminal' },
       { line: 'Property tax', f26: 41578, f27: 55550, type: 'Fixed' },
+    ],
+  },
+
+  // F27 savings outlook — P&L lines, F26 (Jul 25–Jun 26) by month and F27 actuals (Jul, Aug 26).
+  // Outlook: each line's Jul–Aug % change vs the same months F26, applied to the remaining F26 months.
+  savingsOutlook: {
+    months: ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    actualMonths: 2,
+    lines: [
+      { group: 'Admin labour', line: 'Agency labour — Admin', f26: [135047,  109473,  110074,  99252,  91964,  74834,  88977,  75197,  90275,  96708,  79029,  128244], f27: [95401,  87307] },
+      { group: 'Admin labour', line: 'Company wages & benefits — Admin', f26: [57152,  52769,  54479,  61827,  52363,  66831,  57695,  51789,  56535,  55489,  57567,  59890], f27: [60631,  63265] },
+      { group: 'Dock labour', line: 'Agency labour — Dock', f26: [179106,  149635,  130011,  135846,  114485,  85915,  104657,  86199,  139323,  143129,  125961,  248494], f27: [172146,  138152] },
+      { group: 'Dock labour', line: 'Company wages & benefits — Dock', f26: [127586,  119049,  129994,  132369,  120956,  138122,  122988,  116479,  125911,  127308,  141394,  128128], f27: [127670,  113523] },
+      { group: 'Other', line: 'Dock owner-operator base', f26: [14509,  15722,  24305,  27315,  27432,  38345,  24159,  1184,  11,  53,  716,  371], f27: [579,  219] },
+      { group: 'Other', line: 'Rentals (dock + building)', f26: [11766,  20942,  5162,  6288,  6729,  129,  544,  544,  539,  540,  540,  2], f27: [514,  514] },
+      { group: 'Other', line: 'Cargo claims (Aug per claims report)', f26: [16451,  7573,  4876,  14243,  12860,  15413,  -312,  1792,  -1621,  7809,  2509,  11454], f27: [25218,  13433] },
     ],
   },
 

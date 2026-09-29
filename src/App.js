@@ -729,7 +729,7 @@ const ServiceTab = ({ d, x }) => {
             <p className="text-lg font-semibold text-gray-800"><V v={d.claims.period} /></p>
           </div>
           <p className="max-w-xl text-sm text-gray-600">
-            Claims are up vs F26 on the P&L (Jul–Aug +$15.1K). The freight-handling equipment initiative (panel carts, racks) targets damage.
+            Claims are up vs F26 (Jul–Aug +$14.6K). The freight-handling equipment initiative (panel carts, racks) targets damage.
           </p>
         </div>
         <div className="mt-6 grid grid-cols-1 gap-6 border-t border-gray-100 pt-5 lg:grid-cols-3">
@@ -1575,7 +1575,7 @@ const SpendTab = ({ d }) => {
             <p className="mt-1">Agent drivers were replaced by owner operators (agent cost down, owner-operator base and accessorials up) and the fuel subsidy dropped. It lowers the P&L, but it is a network P&D change.</p>
           </div>
         </div>
-        <Source>Source: net-amount pivot by department and Terminal Analysis, Aug 2026. Largest terminal lines shown; repairs include yard repairs. Cargo claims here are P&L (Aug $13,869); the claims report shows $13,432.53 for August.</Source>
+        <Source>Source: net-amount pivot by department and Terminal Analysis, Aug 2026. Largest terminal lines shown; repairs include yard repairs. Cargo claims use the claims report for August ($13,432.53).</Source>
       </Card>
 
       <Card title="Cost % of revenue — valid through Feb 2026" subtitle={`The F26 dashboard's cost-to-revenue model, carried forward · ${ratioRows[0].label} → ${lastLabel}`} icon={TrendingDown} className="mb-8">
@@ -1605,6 +1605,160 @@ const SpendTab = ({ d }) => {
         <Source>F25 months from the F26 cost-transformation dashboard; F26 months calculated from the Terminal Analysis (total terminal cost ÷ gross revenue).</Source>
       </Card>
     </>
+  );
+};
+
+const OUTLOOK_COLORS = { 'Admin labour': '#7c3aed', 'Dock labour': '#06b6d4', Other: '#f59e0b' };
+
+const SavingsOutlook = ({ d, identified }) => {
+  const so = d.savingsOutlook;
+  const n = so.actualMonths;
+  const target = d.sca.f27SavingsTarget;
+  const lines = so.lines.map((l) => {
+    const ly = sum(l.f26.slice(0, n));
+    const ty = sum(l.f27);
+    const rate = ly ? (ty - ly) / ly : 0;
+    // saving per month: F26 cost − F27 cost (actual), or − rate × F26 cost (outlook)
+    const monthly = l.f26.map((v, i) => (i < n ? v - l.f27[i] : -rate * v));
+    return { ...l, rate, ytd: ly - ty, monthly, year: sum(monthly), base: sum(l.f26) };
+  });
+  const groups = ['Admin labour', 'Dock labour', 'Other'];
+  const byGroup = groups.map((g) => {
+    const ls = lines.filter((l) => l.group === g);
+    return { g, ls, year: sum(ls.map((l) => l.year)), ytd: sum(ls.map((l) => l.ytd)), base: sum(ls.map((l) => l.base)) };
+  });
+  const outlookTotal = sum(lines.map((l) => l.year));
+  const labourYear = sum(byGroup.filter((g) => g.g !== 'Other').map((g) => g.year));
+  const grand = outlookTotal + (identified || 0);
+  let cum = 0;
+  const chart = so.months.map((m, i) => {
+    const row = { m: `${m}${i < n ? '' : '*'}` };
+    groups.forEach((g) => { row[g] = sum(lines.filter((l) => l.group === g).map((l) => l.monthly[i])) / 1000; });
+    cum += sum(lines.map((l) => l.monthly[i]));
+    row.cum = cum / 1000;
+    return row;
+  });
+  const onePct = (g) => byGroup.find((x) => x.g === g).base / 100;
+  const gap = isNum(target) ? target - grand : null;
+  const labourOnePct = onePct('Admin labour') + onePct('Dock labour');
+  const cellTone = (v) => (v >= 0 ? 'text-green-700' : 'text-red-600');
+  const sv = (v) => (v >= 0 ? kMoney(v) : `(${kMoney(-v)})`);
+
+  return (
+    <Card title="F27 savings outlook — monthly and yearly roll-up" subtitle="Jul–Aug actual, Sep–Jun outlook at the current rate · savings vs the same month in F26" icon={TrendingUp} className="mb-8">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-xl bg-purple-50 p-4">
+          <p className="text-sm text-gray-600">Admin labour</p>
+          <p className="text-3xl font-bold text-purple-700">{sv(byGroup[0].year)}</p>
+          <p className="text-xs text-gray-600">≈{sv(byGroup[0].year / 12)} / month · F27 outlook</p>
+        </div>
+        <div className="rounded-xl bg-cyan-50 p-4">
+          <p className="text-sm text-gray-600">Dock labour</p>
+          <p className="text-3xl font-bold text-cyan-700">{sv(byGroup[1].year)}</p>
+          <p className="text-xs text-gray-600">≈{sv(byGroup[1].year / 12)} / month · F27 outlook</p>
+        </div>
+        <div className="rounded-xl bg-amber-50 p-4">
+          <p className="text-sm text-gray-600">Other lines (net of claims)</p>
+          <p className="text-3xl font-bold text-amber-700">{sv(byGroup[2].year)}</p>
+          <p className="text-xs text-gray-600">≈{sv(byGroup[2].year / 12)} / month · F27 outlook</p>
+        </div>
+        <div className="rounded-xl bg-gray-900 p-4 text-white">
+          <p className="text-sm text-gray-300">F27 total outlook + dispatcher</p>
+          <p className="text-3xl font-bold text-yellow-300">{sv(grand)}</p>
+          <p className="text-xs text-gray-300">≈{sv(grand / 12)} / month{isNum(target) ? ` · target ${money(target)}` : ' · target TBC'}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <p className="mb-2 text-sm font-semibold text-gray-700">Savings by month ($K) and cumulative F27 roll-up</p>
+          <ResponsiveContainer width="100%" height={300}>
+            <ComposedChart data={chart} margin={{ top: 20, right: 10, bottom: 0, left: -10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <ReferenceArea yAxisId="m" x1={chart[n].m} x2={chart[chart.length - 1].m} fill="#7c3aed" fillOpacity={0.06} label={{ value: 'Outlook', position: 'insideTopRight', fill: '#7c3aed', fontSize: 12, fontWeight: 700 }} />
+              <XAxis dataKey="m" tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="m" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}K`} />
+              <YAxis yAxisId="c" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}K`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => `$${num(v, 1)}K`} />
+              <Legend />
+              <ReferenceLine yAxisId="m" y={0} stroke="#9ca3af" />
+              {groups.map((g) => <Bar key={g} yAxisId="m" dataKey={g} stackId="s" fill={OUTLOOK_COLORS[g]} />)}
+              <Line yAxisId="c" type="monotone" dataKey="cum" name="Cumulative" stroke="#111827" strokeWidth={3} dot={{ r: 3 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+          <p className="mt-1 text-xs text-gray-500">* Outlook months. The $61K dispatcher saving is added once the role comes out (date to confirm) and is not in the chart.</p>
+        </div>
+
+        <div className="lg:col-span-2">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b-2 border-gray-200 text-left text-gray-500">
+                <th className="py-2 pr-2 font-semibold">Line</th>
+                <th className="py-2 pr-2 text-right font-semibold">Jul–Aug rate</th>
+                <th className="py-2 pr-2 text-right font-semibold">/ month</th>
+                <th className="py-2 text-right font-semibold">F27 year</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byGroup.map((g) => (
+                <React.Fragment key={g.g}>
+                  {g.ls.map((l) => (
+                    <tr key={l.line} className="border-b border-gray-100">
+                      <td className="py-1.5 pr-2 text-gray-700">{l.line}</td>
+                      <td className={`py-1.5 pr-2 text-right ${cellTone(-l.rate)}`}>{signed(l.rate * 100, (v) => pct(v))}</td>
+                      <td className={`py-1.5 pr-2 text-right ${cellTone(l.year)}`}>{sv(l.year / 12)}</td>
+                      <td className={`py-1.5 text-right font-semibold ${cellTone(l.year)}`}>{sv(l.year)}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-b border-gray-200 bg-gray-50 font-semibold">
+                    <td className="py-1.5 pr-2" colSpan={2}>
+                      <span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: OUTLOOK_COLORS[g.g] }} />
+                      {g.g}
+                    </td>
+                    <td className={`py-1.5 pr-2 text-right ${cellTone(g.year)}`}>{sv(g.year / 12)}</td>
+                    <td className={`py-1.5 text-right ${cellTone(g.year)}`}>{sv(g.year)}</td>
+                  </tr>
+                </React.Fragment>
+              ))}
+              {isNum(identified) && identified > 0 && (
+                <tr className="border-b border-gray-200 bg-green-50 font-semibold">
+                  <td className="py-1.5 pr-2" colSpan={2}>Dispatcher role (confirmed)</td>
+                  <td className="py-1.5 pr-2 text-right text-green-700">{sv(identified / 12)}</td>
+                  <td className="py-1.5 text-right text-green-700">{sv(identified)}</td>
+                </tr>
+              )}
+              <tr className="bg-gray-900 font-bold text-white">
+                <td className="py-2 pl-2 pr-2" colSpan={2}>F27 total</td>
+                <td className="py-2 pr-2 text-right">{sv(grand / 12)}</td>
+                <td className="py-2 pr-2 text-right text-yellow-300">{sv(grand)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-lg bg-purple-50 p-4 text-sm text-purple-900">
+          <p className="font-semibold">How we reach the goal — labour by %</p>
+          <p className="mt-1">Hold Admin labour at {pct(Math.abs((byGroup[0].ytd / sum(byGroup[0].ls.map((l) => sum(l.f26.slice(0, n))))) * 100))} below F26 and Dock at {pct(Math.abs((byGroup[1].ytd / sum(byGroup[1].ls.map((l) => sum(l.f26.slice(0, n))))) * 100))} below. Every extra 1% is ≈{kMoney(onePct('Admin labour'))}/yr in Admin and ≈{kMoney(onePct('Dock labour'))}/yr on the Dock.</p>
+        </div>
+        <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">{isNum(gap) ? (gap > 0 ? `Gap to target: ${money(gap)}` : 'Outlook covers the target') : 'Gap to target: needs the F27 target'}</p>
+          <p className="mt-1">
+            {isNum(gap) && gap > 0
+              ? `≈${money(gap / 9)} a month over Oct–Jun, or ≈${pct((gap / labourOnePct), 1)} more off total labour.`
+              : isNum(gap) ? `Outlook ${money(grand)} vs target ${money(target)}.` : 'Enter the F27 take-out target and the gap, monthly need and extra labour % calculate here.'}
+          </p>
+        </div>
+        <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
+          <p className="font-semibold">Next levers — being sized</p>
+          <p className="mt-1">{d.initiatives.filter((i) => !isNum(i.annual) && !/labour/i.test(i.category)).map((i) => i.name).join(' · ')} — on top of the outlook.</p>
+        </div>
+      </div>
+      <Source>
+        Outlook = each line's Jul–Aug % change vs the same months of F26, applied to the remaining F26 months (if the current rate holds). Estimates, not booked savings. Brackets = cost increase. Source: net-amount P&L pivot; claims use the claims report for August ($13,432.53). Labour outlook {sv(labourYear)} ≈ {pct(Math.abs((labourYear / (onePct('Admin labour') + onePct('Dock labour'))) ), 1)} of F26 labour spend.
+      </Source>
+    </Card>
   );
 };
 
@@ -1638,6 +1792,8 @@ const InitiativesTab = ({ d, x }) => {
         <Kpi icon={TrendingDown} tone="amber" label="Still to identify" value={<V v={gap} fmt={money} />} sub={isNum(gap) ? `≈${money(gap / monthsLeft)} per month over ${monthsLeft} months (Oct–Jun)` : 'Needs the take-out target'} />
         <Kpi icon={Activity} tone="blue" label="Initiatives being sized" value={num(items.filter((i) => !isNum(i.annual)).length)} sub={items.some((i) => isNum(i.ytd)) ? `Realized YTD ${money(realized)}` : "$ values added as each one firms up"} />
       </div>
+
+      <SavingsOutlook d={d} identified={identified} />
 
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
         <Card title={pieData.length < 2 ? "Initiatives by status" : "Savings breakdown"} subtitle={pieData.length < 2 ? `${items.length} tracked; $ values added as they firm up` : "Initiatives with an annual $ value"} icon={BarChart3} className="lg:col-span-2">
