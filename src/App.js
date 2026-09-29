@@ -672,6 +672,22 @@ const ServiceTab = ({ d, x }) => {
 
       <MissedPuCard m={d.missedPu} />
 
+      <Card title="Cargo claims" subtitle={`Claims report · terminal ${d.claims.terminalCode} (Mississauga)`} icon={Shield} className="mb-8">
+        <div className="flex flex-wrap items-end gap-6">
+          <div>
+            <p className="text-sm font-medium text-gray-600">Claims amount</p>
+            <p className="text-4xl font-bold text-gray-900"><V v={d.claims.amount} fmt={(v) => money(v, 2)} /></p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-600">Period</p>
+            <p className="text-lg font-semibold text-gray-800"><V v={d.claims.period} /></p>
+          </div>
+          <p className="max-w-xl text-sm text-gray-600">
+            Cargo claims reduction is one of the F27 savings initiatives (see SCA & Savings). Handling procedures, reweighs and scan discipline all feed it.
+          </p>
+        </div>
+      </Card>
+
       <Card title="Scanning compliance — in/out of facility" subtitle={`Compliance Reporting · ${sc.dateRange} · all trip types`} icon={Activity}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {sc.measures.map((m) => {

@@ -164,6 +164,13 @@ export const DEFAULT_DATA = {
     ],
   },
 
+  // Cargo claims — claims report, terminal T-0502 (Mississauga)
+  claims: {
+    terminalCode: 'T-0502',
+    amount: 13432.53,
+    period: null,             // period not stated in the report extract
+  },
+
   // --------------------------------------------------------------------------
   // SERVICE — SCANNING COMPLIANCE (Freight Bills Scanned %)
   // --------------------------------------------------------------------------
@@ -479,6 +486,13 @@ export const EDIT_SECTIONS = [
       f('missedPu.totalMissed', 'Total missed PUs'),
       f('missedPu.totalMeasured', 'Total measured PUs'),
       f('missedPu.falsePositiveCount', 'OPS false positives'),
+    ],
+  },
+  {
+    title: 'Cargo claims',
+    fields: [
+      f('claims.amount', 'Claims amount ($)'),
+      f('claims.period', 'Claims period', 'text'),
     ],
   },
   {
