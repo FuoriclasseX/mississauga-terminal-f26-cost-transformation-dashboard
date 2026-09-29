@@ -38,23 +38,24 @@ export const DEFAULT_DATA = {
     recordablesF27Ytd: null, // count of recordable incidents Jul 1 – today
     daysSinceLastRecordable: null,
     stepObservationsMtd: null,
+    // Mississauga talking points (from the presenter)
     practices: [
-      'Supervisors and managers are accountable for STEP observations — non-compliance is addressed on the spot and documented on the OHS shared drive.',
-      'Tailgates every shift; forklift pre- and post-shift inspections; shunt pre-trip meeting every shift using the new checklist.',
-      'Chock check on every door (spares on hand). Daily placard check with the yard check; drivers remove placards when shunts are called.',
-      'No loading forklifts on straight trucks — prevents serious injuries and equipment damage.',
-      'Safety equipment and dock conditions inspected and logged on the H&S inspection sheet, collected monthly by OHS and reviewed at JHSC.',
+      'Tailgates with the team on safety topics and safe work practices, plus specific safety moments after incidents (e.g. avoiding pinch points).',
+      'Pre- and post-shift forklift inspections by every operator — deficiencies identified and corrected immediately. Shunt pre-trip meetings every shift using the new checklist.',
+      'No loading forklifts on straight trucks — prevents serious injuries to employees and damage to forklifts.',
+      'Safety equipment and dock conditions inspected and documented on H&S inspection sheets, collected monthly by OHS and fully reviewed at JHSC.',
+      'Supervisors and managers address any non-compliance on the spot and report it in their STEP observations.',
     ],
     incidentProcess: [
-      'Every incident reported promptly; supervisors work directly with OHS on WSIB forms and a safe return to work.',
-      'Root cause and action plan reviewed with OHS for every incident to prevent repeats.',
-      'Monthly safety e-learning for supervisors and managers on topics tied to our operation.',
-      'Forklift and TDG certifications renewed before they expire.',
+      'Incidents reported promptly — supervisors and managers work directly with OHS on WSIB forms and a safe return to work.',
+      'Detailed incident descriptions; root cause identified with OHS; corrective action plans implemented, with follow-up prioritized so controls are in place to prevent recurrence.',
+      'Monthly safety e-learning for managers and supervisors on topics tied to our operation.',
+      'Forklift and TDG training completed before expiry.',
     ],
     f27Plans: [
-      'Weekly STEP observation target per supervisor, reviewed in the Monday ops meeting.',
-      'Near-miss reporting push — every near miss logged and discussed at the next tailgate.',
-      'Certification tracker (forklift / TDG) with 30-day expiry alerts.',
+      'Roofing work over the dock: work areas identified and barricaded so no one enters zones under overhead work (falling-debris risk).',
+      'N95 masks made readily available on the dock during roofing work to minimize exposure to airborne debris.',
+      'Safety moments after every incident so the whole team hears the specific learning.',
     ],
   },
 
@@ -229,6 +230,63 @@ export const DEFAULT_DATA = {
       'Demurrage and TL billing captured on every eligible shipment.',
       'Accessorial audit on freight bills (appointment, tailgate, storage, inside delivery) before invoicing.',
       'Clock-in / clock-out (CICO) discipline — late starts, missed lunches and early-offs captured as hours saved.',
+    ],
+  },
+
+  // --------------------------------------------------------------------------
+  // ACCESSORIALS — Accessorial unit volume report (month-reactive)
+  // --------------------------------------------------------------------------
+  accessorials: {
+    monthly: [
+      { label: 'Private residence delivery', units: 18400 },
+      { label: 'Tailgate delivery', units: 6174 },
+      { label: 'Appointment delivery', units: 5468 },
+      { label: 'Appointment pick-up', units: 807 },
+      { label: 'Tailgate pick-up', units: 630 },
+      { label: 'Private residence pick-up', units: 578 },
+      { label: 'Inside delivery', units: 315 },
+      { label: 'Storage', units: 279 },
+      { label: 'Limited access delivery', units: 90 },
+      { label: 'Tradeshow delivery', units: 82 },
+      { label: 'Inside pick-up', units: 64 },
+      { label: 'Detention w/ power at delivery', units: 17 },
+      { label: 'Limited access pick-up', units: 14 },
+      { label: 'Tradeshow pick-up', units: 3 },
+    ],
+    weekly: [
+      { label: 'Jul 13', k: 8.0 }, { label: 'Jul 20', k: 7.9 }, { label: 'Jul 27', k: 7.2 },
+      { label: 'Aug 3', k: 6.3 }, { label: 'Aug 10', k: 7.6 }, { label: 'Aug 17', k: 7.1 },
+      { label: 'Aug 24', k: 8.1 }, { label: 'Aug 31', k: 7.7 }, { label: 'Sep 7', k: 6.7 },
+      { label: 'Sep 14', k: 7.5 }, { label: 'Sep 21', k: 6.6 }, { label: 'Sep 28*', k: 2.8 },
+    ],
+  },
+
+  // --------------------------------------------------------------------------
+  // LABOUR DISTRIBUTION — company employees, Terminal Labor Distribution Report
+  // Q1 = Jul–Sep. F27 Q1 is to date.
+  // --------------------------------------------------------------------------
+  labour: {
+    f26: { hours: 5700, totalPaid: 143500, regularCost: 140900, otHours: 56.7, otPaid: 2200, headCount: 16, otPct: 1.0,
+           dockHours: 5205.4, dockRegCost: 131452.77, dockOtCost: 2203.88, adminHours: 446.35, adminRegCost: 9490.76 },
+    f27: { hours: 6100, totalPaid: 155300, regularCost: 152300, otHours: 62.3, otPaid: 2400, headCount: 17, otPct: 1.0,
+           dockHours: 5207.42, dockRegCost: 133939.99, dockOtCost: 2386.86, adminHours: 908.55, adminRegCost: 18400.58 },
+  },
+
+  // --------------------------------------------------------------------------
+  // P&D — trip & stop measures, F27 Q1 (Jul–Sep), P&D daily totals dashboard
+  // --------------------------------------------------------------------------
+  pd: {
+    period: 'F27 Q1 (Jul–Sep)',
+    totals: [
+      { label: 'Trips', v: 4608 }, { label: 'Stops', v: 45712 }, { label: 'Weight (lbs)', v: 32330382 },
+      { label: 'Miles', v: 769055 }, { label: 'Bills', v: 63738 }, { label: 'Delivery bills', v: 41725 },
+      { label: 'Pickup bills', v: 24401 }, { label: 'Hours', v: 21889 }, { label: 'Delivery attempts', v: 643 },
+      { label: 'Pickup attempts', v: 1848 },
+    ],
+    ratios: [
+      { label: 'Stops / trip', v: 9.92, d: 2 }, { label: 'Stops / hour', v: 2.09, d: 2 }, { label: 'Hours / trip', v: 4.75, d: 2 },
+      { label: 'Bills / trip', v: 13.83, d: 2 }, { label: 'Weight / trip', v: 7017 }, { label: 'Weight / stop', v: 707 },
+      { label: 'Miles / trip', v: 109.1, d: 1 }, { label: 'Miles / hour', v: 35.13, d: 2 }, { label: 'Miles / stop', v: 16.82, d: 2 },
     ],
   },
 

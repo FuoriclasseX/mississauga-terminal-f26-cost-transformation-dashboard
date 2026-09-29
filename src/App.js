@@ -513,7 +513,7 @@ const SafetyTab = ({ d }) => {
           <Card title="Incident reporting & training" icon={Users}>
             <Bullets items={s.incidentProcess} icon={CheckCircle} color="text-blue-600" />
           </Card>
-          <Card title="New for F27" icon={Zap}>
+          <Card title="Site-specific initiatives" icon={Zap}>
             <Bullets items={s.f27Plans} icon={ChevronRight} color="text-purple-600" />
           </Card>
         </div>
@@ -814,6 +814,118 @@ const MissedPuCard = ({ m }) => {
   );
 };
 
+// --- Extra SCA / productivity cards -----------------------------------------
+const AccessorialCard = ({ a }) => {
+  const total = sum(a.monthly.map((r) => r.units));
+  const top = a.monthly.slice(0, 6);
+  const top3 = sum(a.monthly.slice(0, 3).map((r) => r.units));
+  return (
+    <Card title="Accessorial capture" subtitle="Accessorial unit volume report · current month" icon={DollarSign} className="mb-8">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <div>
+          <p className="mb-2 text-sm font-semibold text-gray-700">Top accessorials this month · ≈{num(total)} units total</p>
+          <div className="space-y-2">
+            {top.map((r) => (
+              <div key={r.label}>
+                <div className="flex justify-between text-xs text-gray-600"><span>{r.label}</span><span className="font-semibold">{num(r.units)}</span></div>
+                <div className="h-2 overflow-hidden rounded-full bg-gray-100"><div className="h-full bg-purple-500" style={{ width: `${(r.units / top[0].units) * 100}%` }} /></div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-sm text-gray-600">Private-residence, tailgate and appointment deliveries are ≈{pct((top3 / total) * 100, 0)} of volume — every one coded is revenue captured.</p>
+        </div>
+        <div>
+          <p className="mb-2 text-sm font-semibold text-gray-700">Weekly accessorial units (thousands) · 12 weeks</p>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={a.weekly} margin={{ top: 20, right: 5, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${v}K units`} />
+              <Bar dataKey="k" name="Units (K)" fill="#7c3aed" radius={[3, 3, 0, 0]}>
+                <LabelList dataKey="k" position="top" style={{ fontSize: 10, fill: '#374151' }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <Source>*Week of Sep 28 is partial.</Source>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+const LabourCard = ({ l }) => {
+  const rows = [
+    ['Hours worked', 'hours', (v) => `${num(v / 1000, 1)}K`],
+    ['Total paid', 'totalPaid', (v) => `$${num(v / 1000, 1)}K`],
+    ['Dock Operations hours', 'dockHours', (v) => num(v, 0)],
+    ['Dock regular cost', 'dockRegCost', money],
+    ['Terminal Admin hours', 'adminHours', (v) => num(v, 0)],
+    ['Terminal Admin regular cost', 'adminRegCost', money],
+    ['OT hours', 'otHours', (v) => num(v, 1)],
+    ['OT paid', 'otPaid', (v) => `$${num(v / 1000, 1)}K`],
+    ['Head count', 'headCount', num],
+    ['OT as % of hours', 'otPct', (v) => pct(v)],
+  ];
+  return (
+    <Card title="Labour distribution — company employees" subtitle="Terminal Labor Distribution Report · Q1 (Jul–Sep) F26 vs F27 to date" icon={Users} className="mb-8">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <div className="overflow-x-auto lg:col-span-3">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b-2 border-gray-200 text-left text-gray-500">
+                <th className="py-2 pr-4 font-semibold">Metric</th>
+                <th className="py-2 pr-4 text-right font-semibold">Q1 F26</th>
+                <th className="py-2 text-right font-semibold">Q1 F27</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(([label, key, fmt]) => (
+                <tr key={key} className="border-b border-gray-100">
+                  <td className="py-2 pr-4 text-gray-700">{label}</td>
+                  <td className="py-2 pr-4 text-right text-gray-600"><V v={l.f26[key]} fmt={fmt} small /></td>
+                  <td className="py-2 text-right font-semibold"><V v={l.f27[key]} fmt={fmt} small /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="space-y-3 text-sm lg:col-span-2">
+          <div className="rounded-lg bg-green-50 p-4 text-green-900">
+            <p className="font-semibold">Company dock hours flat</p>
+            <p>{num(l.f26.dockHours)} → {num(l.f27.dockHours)} hrs, while agency hours were cut (see SCA hours above). OT held at {pct(l.f27.otPct)} of hours.</p>
+          </div>
+          <div className="rounded-lg bg-amber-50 p-4 text-amber-900">
+            <p className="font-semibold">Terminal Admin hours up</p>
+            <p>{num(l.f26.adminHours)} → {num(l.f27.adminHours)} hrs ({money(l.f26.adminRegCost)} → {money(l.f27.adminRegCost)}). Be ready to explain the staffing change.</p>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+const PdCard = ({ p }) => (
+  <Card title="P&D — trip & stop measures" subtitle={`P&D daily totals dashboard · ${p.period}`} icon={Truck} className="mb-8">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {p.totals.map((t) => (
+        <div key={t.label} className="rounded-lg bg-gray-50 p-3">
+          <p className="text-xs text-gray-500">{t.label}</p>
+          <p className="text-lg font-bold text-gray-900"><V v={t.v} fmt={num} small /></p>
+        </div>
+      ))}
+    </div>
+    <div className="mt-4 grid grid-cols-3 gap-3 lg:grid-cols-9">
+      {p.ratios.map((t) => (
+        <div key={t.label} className="rounded-lg bg-purple-50 p-3 text-center">
+          <p className="text-xs text-gray-500">{t.label}</p>
+          <p className="text-lg font-bold text-purple-700"><V v={t.v} fmt={(v) => num(v, t.d || 0)} small /></p>
+        </div>
+      ))}
+    </div>
+  </Card>
+);
+
 // --- SCA & Savings ---------------------------------------------------------
 const ScaTab = ({ d, x }) => {
   const s = d.sca;
@@ -1046,6 +1158,9 @@ const ScaTab = ({ d, x }) => {
           <Bullets items={s.actions} icon={ChevronRight} color="text-purple-600" />
         </Card>
       </div>
+
+      <LabourCard l={d.labour} />
+      <AccessorialCard a={d.accessorials} />
 
       <Card
         title="F27 savings plan"
@@ -1300,6 +1415,8 @@ const ProductivityTab = ({ d, x }) => {
           </div>
         </Card>
       </div>
+
+      <PdCard p={d.pd} />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card title="Load factor — weekly" subtitle={`Targets: LF score ${lf.lfTarget}% · load ${lf.loadTarget}%`} icon={Truck}>
