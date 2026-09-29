@@ -1637,12 +1637,24 @@ const InitiativesTab = ({ d, x }) => {
         <Kpi icon={Target} tone="purple" label="F27 take-out target" value={<V v={target} fmt={money} />} sub="Enter in Edit data" />
         <Kpi icon={CheckCircle} tone="green" label="Identified (annual)" value={hasIdentified ? money(identified) : <Tbc />} footer={isNum(pctOfTarget) && <Chip tone={pctOfTarget >= 100 ? 'green' : 'amber'}>{pct(pctOfTarget, 0)} of target</Chip>} />
         <Kpi icon={TrendingDown} tone="amber" label="Still to identify" value={<V v={gap} fmt={money} />} sub={isNum(gap) ? `≈${money(gap / monthsLeft)} per month over ${monthsLeft} months (Oct–Jun)` : 'Needs the take-out target'} />
-        <Kpi icon={Activity} tone="blue" label="Realized YTD" value={items.some((i) => isNum(i.ytd)) ? money(realized) : <Tbc />} sub="Enter per initiative in Edit data" />
+        <Kpi icon={Activity} tone="blue" label="Initiatives being sized" value={num(items.filter((i) => !isNum(i.annual)).length)} sub={items.some((i) => isNum(i.ytd)) ? `Realized YTD ${money(realized)}` : "$ values added as each one firms up"} />
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
-        <Card title="Savings breakdown" subtitle="Initiatives with an annual $ value" icon={BarChart3} className="lg:col-span-2">
-          {pieData.length ? (
+        <Card title={pieData.length < 2 ? "Initiatives by status" : "Savings breakdown"} subtitle={pieData.length < 2 ? `${items.length} tracked; $ values added as they firm up` : "Initiatives with an annual $ value"} icon={BarChart3} className="lg:col-span-2">
+          {pieData.length < 2 ? (
+            <div className="space-y-3">
+              {counts.map((c) => (
+                <div key={c.k} className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
+                  <Chip tone={(STATUS_STYLE[c.k] || STATUS_STYLE.Opportunity).chip}>{c.k}</Chip>
+                  <span className="text-2xl font-bold text-gray-800">{c.n}</span>
+                </div>
+              ))}
+              <p className="text-sm text-gray-700">
+                {pieData.length === 1 ? <><span className="font-semibold">{money(pieData[0].value)}</span> confirmed — {pieData[0].name.toLowerCase()}.</> : 'No $ values confirmed yet.'}
+              </p>
+            </div>
+          ) : pieData.length ? (
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
@@ -1655,7 +1667,7 @@ const InitiativesTab = ({ d, x }) => {
           ) : (
             <EmptyChart height={260} label="Add annual $ values to initiatives" />
           )}
-          <p className="mt-2 text-xs text-gray-500">Initiatives without a $ value yet show TBC below — add amounts in Edit data as they firm up.</p>
+          {pieData.length >= 2 && <p className="mt-2 text-xs text-gray-500">Only initiatives with a confirmed annual $ value are in the chart.</p>}
         </Card>
         <Card title="Realized in September — evidence" subtitle="Already visible in the SCA and productivity reports" icon={Award} className="lg:col-span-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1693,9 +1705,15 @@ const InitiativesTab = ({ d, x }) => {
                     <p className="text-sm text-gray-600">{i.detail}</p>
                   </div>
                   <div className="flex-shrink-0 text-right">
-                    <p className="text-3xl font-bold text-gray-800"><V v={i.annual} fmt={money} /></p>
-                    <p className="mt-1 text-sm text-gray-600">{isNum(i.annual) && identified > 0 ? `${pct((i.annual / identified) * 100)} of identified` : 'per year'}</p>
-                    <p className="mt-1 text-xs text-gray-500">Realized YTD <V v={i.ytd} fmt={money} small /></p>
+                    {isNum(i.annual) ? (
+                      <>
+                        <p className="text-3xl font-bold text-gray-800">{money(i.annual)}</p>
+                        <p className="mt-1 text-sm text-gray-600">per year{identified > 0 ? ` · ${pct((i.annual / identified) * 100, 0)} of identified` : ''}</p>
+                      </>
+                    ) : (
+                      <p className="text-lg font-semibold text-gray-500">$ to be sized</p>
+                    )}
+                    {isNum(i.ytd) && <p className="mt-1 text-xs text-gray-500">Realized YTD {money(i.ytd)}</p>}
                     <span className="mt-3 inline-block"><Chip tone={st.chip}>{i.status}</Chip></span>
                   </div>
                 </div>
@@ -1733,8 +1751,6 @@ const ScaTab = ({ d, x }) => {
     { period: 'F27 Sept MTD', Company: s.f27CompanyCost, Agency: s.f27AgencyCost },
   ];
   const labourReady = allNum(s.f26CompanyCost, s.f26AgencyCost, s.f27CompanyCost, s.f27AgencyCost);
-  const coverage = x.initHasAnnual && isNum(s.f27SavingsTarget) && s.f27SavingsTarget > 0 ? (x.initAnnual / s.f27SavingsTarget) * 100 : null;
-  const statusTone = (st) => (/confirm|sustain/i.test(st) ? 'green' : /new/i.test(st) ? 'blue' : /develop/i.test(st) ? 'amber' : 'purple');
   const cppLabel = { green: 'On target', amber: 'Under target — watch', red: 'Over target', gray: '' }[x.cppTone];
   const periodNote = `F26 = full September 2025 · F27 = September MTD (${isNum(s.wdMtd) ? s.wdMtd : '—'} of ${isNum(s.wdMonth) ? s.wdMonth : '—'} working days)`;
 
@@ -1955,6 +1971,10 @@ const ScaTab = ({ d, x }) => {
               </div>
             );
           })()}
+          {!s.workforce.some((w) => isNum(w.drDock) || isNum(w.agencyDock)) ? (
+            <p className="mt-4 text-xs text-gray-500">Per-shift headcount (dock + admin) to follow.</p>
+          ) : (
+          <>
           <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">Per shift — headcount (dock + admin)</p>
           <table className="w-full text-xs">
             <thead>
@@ -1980,6 +2000,8 @@ const ScaTab = ({ d, x }) => {
               })}
             </tbody>
           </table>
+          </>
+          )}
         </Card>
         <Card title="How we are taking cost out" icon={Zap}>
           <Bullets items={s.actions} icon={ChevronRight} color="text-purple-600" />
@@ -1990,49 +2012,6 @@ const ScaTab = ({ d, x }) => {
       <AccessorialCard a={d.accessorials} />
       <ReweighCard r={d.reweighs} />
 
-      <Card
-        title="F27 savings plan"
-        subtitle="Initiatives, full-year plan and realized to date"
-        icon={Target}
-        right={
-          <div className="text-right">
-            <p className="text-xs uppercase text-gray-500">F27 take-out target</p>
-            <p className="text-2xl font-bold text-gray-900"><V v={s.f27SavingsTarget} fmt={money} /></p>
-            {isNum(coverage) && <Chip tone={coverage >= 100 ? 'green' : 'amber'}>{pct(coverage, 0)} of target planned</Chip>}
-          </div>
-        }
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b-2 border-gray-200 text-left text-gray-500">
-                <th className="py-2 pr-4 font-semibold">Initiative</th>
-                <th className="py-2 pr-4 font-semibold">Status</th>
-                <th className="py-2 pr-4 text-right font-semibold">F27 plan</th>
-                <th className="py-2 pr-4 text-right font-semibold">Realized YTD</th>
-                <th className="py-2 text-right font-semibold">% realized</th>
-              </tr>
-            </thead>
-            <tbody>
-              {d.initiatives.filter((i) => i.name).map((i, idx) => (
-                <tr key={idx} className="border-b border-gray-100">
-                  <td className="py-3 pr-4 font-medium text-gray-800">{i.name}</td>
-                  <td className="py-3 pr-4"><Chip tone={statusTone(i.status || '')}>{i.status || '—'}</Chip></td>
-                  <td className="py-3 pr-4 text-right font-semibold"><V v={i.annual} fmt={money} small /></td>
-                  <td className="py-3 pr-4 text-right"><V v={i.ytd} fmt={money} small /></td>
-                  <td className="py-3 text-right text-gray-600">{allNum(i.annual, i.ytd) && i.annual > 0 ? pct((i.ytd / i.annual) * 100, 0) : '—'}</td>
-                </tr>
-              ))}
-              <tr className="bg-gray-50 font-bold">
-                <td className="py-3 pr-4" colSpan={2}>Total</td>
-                <td className="py-3 pr-4 text-right">{x.initHasAnnual ? money(x.initAnnual) : <Tbc small />}</td>
-                <td className="py-3 pr-4 text-right">{x.initHasYtd ? money(x.initYtd) : <Tbc small />}</td>
-                <td className="py-3 text-right">{x.initHasAnnual && x.initHasYtd && x.initAnnual > 0 ? pct((x.initYtd / x.initAnnual) * 100, 0) : '—'}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Card>
     </>
   );
 };
