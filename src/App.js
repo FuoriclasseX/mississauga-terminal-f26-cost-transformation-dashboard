@@ -1812,16 +1812,16 @@ const SpendTab = ({ d }) => {
 
       <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         <Kpi icon={DollarSign} tone="purple" label={`Total terminal cost · F27 ${period}`} value={kMoney(a27.total)}
-          sub={`vs ${kMoney(a26.total)} same months F26`}
+          sub={`vs ${kMoney(a26.total)} same months last year (${period} 2025)`}
           footer={<Delta d={{ abs: a27.total - a26.total, pct: chg(a27.total, a26.total) }} goodWhen="down" fmtAbs={kMoney} />} />
         <Kpi icon={Package} tone="blue" label="Freight bills (PROs in + out)" value={num(a27.pros)}
           sub={`vs ${num(a26.pros)} · weight ${(a27.lbs / 1e6).toFixed(1)}M vs ${(a26.lbs / 1e6).toFixed(1)}M lbs`}
           footer={<Delta d={{ abs: a27.pros - a26.pros, pct: chg(a27.pros, a26.pros) }} goodWhen="up" fmtAbs={num} />} />
-        <Kpi icon={Target} tone="green" label="Total terminal cost per PRO (P&L)" value={money(perPro(a27, 'total'), 2)}
-          sub={`vs ${money(perPro(a26, 'total'), 2)} · most of the drop is P&D driver mix (see below)`}
+        <Kpi icon={Target} tone="green" label={`Total terminal cost per PRO · F27 ${period}`} value={money(perPro(a27, 'total'), 2)}
+          sub={`vs ${money(perPro(a26, 'total'), 2)} same months last year (${period} 2025) · most of the drop is P&D driver mix`}
           footer={<Delta d={{ abs: perPro(a27, 'total') - perPro(a26, 'total'), pct: chg(perPro(a27, 'total'), perPro(a26, 'total')) }} goodWhen="down" fmtAbs={(v) => money(v, 2)} />} />
-        <Kpi icon={Gauge} tone="amber" label="Total terminal cost per CWT (P&L)" value={money(perCwt(a27, 'total'), 2)}
-          sub={`vs ${money(perCwt(a26, 'total'), 2)} · per 100 lbs handled`}
+        <Kpi icon={Gauge} tone="amber" label={`Total terminal cost per CWT · F27 ${period}`} value={money(perCwt(a27, 'total'), 2)}
+          sub={`vs ${money(perCwt(a26, 'total'), 2)} same months last year (${period} 2025) · CWT = 100 lbs handled`}
           footer={<Delta d={{ abs: perCwt(a27, 'total') - perCwt(a26, 'total'), pct: chg(perCwt(a27, 'total'), perCwt(a26, 'total')) }} goodWhen="down" fmtAbs={(v) => money(v, 2)} />} />
       </div>
 
