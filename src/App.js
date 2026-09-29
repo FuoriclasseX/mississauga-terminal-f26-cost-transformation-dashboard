@@ -309,11 +309,11 @@ const TABS = [
   { id: 'overview', label: 'Overview', icon: Home },
   { id: 'safety', label: 'Safety', icon: Shield },
   { id: 'service', label: 'Service', icon: Clock },
-  { id: 'sca', label: 'SCA & Savings', icon: DollarSign },
-  { id: 'spend', label: 'Cost & Volume', icon: BarChart3 },
+  { id: 'initiatives', label: 'F27 Savings', icon: Target },
+  { id: 'sca', label: 'SCA', icon: DollarSign },
   { id: 'productivity', label: 'Productivity', icon: Gauge },
-  { id: 'initiatives', label: 'F27 Initiatives', icon: Target },
-  { id: 'terminal', label: 'Terminal', icon: Wrench },
+  { id: 'terminal', label: 'Equipment & Terminal', icon: Wrench },
+  { id: 'spend', label: 'Cost & Volume', icon: BarChart3 },
   { id: 'f26', label: 'F26 Recap', icon: Calendar },
   { id: 'qa', label: 'Q&A', icon: ClipboardCheck },
 ];
@@ -323,13 +323,13 @@ const OverviewTab = ({ d, x, go }) => {
   const fp = fiscalProgress();
   const p27 = d.productivity.f27;
   const agenda = [
-    { id: 'safety', icon: Shield, title: 'Safety', text: 'Current TRIR, what we do every shift, and what we are adding in F27.' },
-    { id: 'service', icon: Clock, title: 'Service', text: 'On-time service incl./excl. partner carriers, missed pickups and scanning.' },
+    { id: 'safety', icon: Shield, title: 'Safety', text: 'TRIR, what we do every shift, and driver-led initiatives for F27.' },
+    { id: 'service', icon: Clock, title: 'Service', text: 'On-time service, service failures by code, missed pickups and scanning.' },
     { id: 'initiatives', icon: TrendingUp, title: 'F27 Savings Outlook', text: 'Monthly and yearly roll-up to Jun 2027 — Admin and Dock labour by %, next levers.' },
-    { id: 'sca', icon: DollarSign, title: 'SCA & Savings', text: 'Hours vs allowance, SCA dock cost per PRO, labour and agency mix.' },
-    { id: 'spend', icon: BarChart3, title: 'Cost & Volume', text: 'Terminal cost Jul 2025 → Aug 2026 against PROs and weight; cost per PRO.' },
-    { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, P&D measures, load factor and CICO.' },
-    { id: 'terminal', icon: Wrench, title: 'Physical Terminal', text: 'Moving to a new building, expected before the end of 2026.' },
+    { id: 'sca', icon: DollarSign, title: 'SCA', text: 'Hours vs allowance, SCA dock cost per PRO, shifts and agency mix.' },
+    { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, load factor, CICO and P&D measures.' },
+    { id: 'terminal', icon: Wrench, title: 'Equipment & Terminal', text: 'Load quality and securement equipment; new building before the end of 2026.' },
+    { id: 'spend', icon: BarChart3, title: 'Backup — Cost & Volume', text: 'Terminal P&L Jul 2025 → Aug 2026 against PROs and weight.' },
   ];
   return (
     <>
@@ -1292,6 +1292,12 @@ const LoadFactorCard = ({ lf }) => {
 };
 
 // --- Q&A prep — answers to the questions leadership is likely to ask ----------
+const s2rides = (d) => {
+  const dp = d.safety.driverProgram;
+  const full = Math.ceil(dp.drivers / 4);
+  return `${dp.rampPct.map((p) => Math.ceil(full * p)).join(' → ')} per quarter (${dp.drivers} drivers)`;
+};
+
 const QaTab = ({ d, x }) => {
   const s = d.sca;
   const p = d.productivity;
@@ -1334,6 +1340,7 @@ const QaTab = ({ d, x }) => {
       a: [
         `F27 cost take-out target: ${f(s.f27SavingsTarget, money)}.`,
         `Identified so far: ${f(identified, money)} per year — dispatcher role eliminated with dispatch centralized. More initiatives in development.`,
+        `F27 outlook if current rates hold: ≈${kMoney(outlookTotal(d) + (identified || 0))} below F26 (≈${kMoney((outlookTotal(d) + (identified || 0)) / 12)} a month) — Admin labour, Dock labour and other P&L lines plus the dispatcher saving (estimate, not booked).`,
         `Run-rate evidence: cost per unit ${f(x.cpu26, (v) => money(v, 2))} → ${f(x.cpu27, (v) => money(v, 2))} (≈${f(x.cpuSavings, kMoney)} avoided in September to date), hours under SCA allowance, agency share down.`,
       ],
       calc: true,
@@ -1343,6 +1350,7 @@ const QaTab = ({ d, x }) => {
       a: [
         `SCA hours: September requires ${f(s.hourReductionTarget, num)} fewer dock hours than F26 September (≈${f(reductionValue, kMoney)} at ${f(p.f27.hourlyRate, (v) => money(v, 2))}/hr). We are on pace for ≈${f(x.paceReduction, num)} — ${f(x.paceVsReductionTarget, (v) => pct(v, 0))} of the requirement.`,
         `Cost per PRO: stay under ${f(s.costPerProTarget, (v) => money(v, 2))} — currently ${f(x.cppUnder, (v) => money(v, 2))} under on average per PRO.`,
+        'Labour by %: hold Admin labour 13.5% and Dock labour 4.2% below F26; every extra 1% ≈ $18.6K/yr Admin, ≈ $31.7K/yr Dock.',
         isNum(s.f27SavingsTarget)
           ? `F27 take-out: ${money(s.f27SavingsTarget)} target − ${f(identified, money, '$0')} identified = ${money(gap)} still to find ≈ ${money(gapPerMonth)} per month over the ${monthsLeft} months left (Oct–Jun).`
           : `F27 take-out target: TBC — gap = target − ${f(identified, money, '$0')} identified, spread over the ${monthsLeft} months left (Oct–Jun). Enter the target in Edit data and this line calculates itself.`,
@@ -1355,6 +1363,7 @@ const QaTab = ({ d, x }) => {
         `Dock labour ${f(s.f27TotalCost, money)} September MTD over ${f(s.wdMtd, num)} working days ≈ ${f(perWd, money)} per working day.`,
         `Projected September ≈ ${f(projSept, kMoney)} vs ${f(s.f26TotalCost, kMoney)} F26 September (${f(projVsF26, (v) => pct(v, 0))}).`,
         `Cost per dock hour ${f(p.f27.hourlyRate, (v) => money(v, 2))} (${x.rateVsLy ? signed(x.rateVsLy.pct, (v) => pct(v)) : '—'} YoY — wage rate); cost per unit ${f(x.cpu27, (v) => money(v, 2))} vs ${f(x.cpu26, (v) => money(v, 2))}.`,
+        'Total terminal (P&L): ≈$1.28M a month in F27 Jul–Aug vs ≈$1.63M the same months last year (−21.2%); total cost per PRO $35.93 vs $42.07 — most of the drop is P&D driver mix.',
       ],
       calc: true,
     },
@@ -1396,6 +1405,21 @@ const QaTab = ({ d, x }) => {
       ],
     },
     {
+      q: 'Which service failure happens most?',
+      a: o.weeks.map((w) => {
+        const fails = Object.entries(w.codes).filter(([k]) => k !== 'AS').sort((p2, q2) => q2[1] - p2[1]);
+        const total = sum(fails.map(([, v]) => v));
+        return `${w.label} (${w.note}): ${total} service fails after removing AS (not a service fail) — top: ${fails.slice(0, 3).map(([k, v]) => `${k} ${v}`).join(', ')}. Adj on time ${pct(w.adjPct, 2)}.`;
+      }),
+    },
+    {
+      q: 'What are your agency to D&R ratios by shift?',
+      a: [
+        ...s.workforce.map((w) => `${w.shift}: dock ${w.agencyDock} agency / ${w.drDock} D&R (${w.drDock ? `${num(w.agencyDock / w.drDock, 1)} : 1` : 'all agency'}); admin ${w.agencyAdmin} / ${w.drAdmin}.`),
+        `Example day ${s.workforceDate}. Dock hours ${num(sum(s.workforce.map((w) => w.actual)) + s.driverLoaders.actual, 2)} vs ${num(sum(s.workforce.map((w) => w.target)) + s.driverLoaders.target, 0)} budget.`,
+      ],
+    },
+    {
       q: 'What safety initiatives are in place — active vs completed?',
       a: [
         `Completed: ${d.safety.initiatives.filter((i) => i.status === 'Completed').map((i) => i.name.split(' — ')[0]).join('; ')}.`,
@@ -1412,6 +1436,13 @@ const QaTab = ({ d, x }) => {
       a: [
         `Zero recordable incidents in F27 to date — TRIR ${f(d.safety.trirF27Ytd, (v) => num(v, 2))} vs ${f(d.safety.trirF26, (v) => num(v, 2))} in F26.`,
         `${f(x.daysSinceRecordable, num)} days since the last recordable (Sep 10, 2025).`,
+      ],
+    },
+    {
+      q: 'What is new for driver safety?',
+      a: [
+        'Driver safety reps: top safety-score drivers join the monthly safety meeting and speak for drivers — peers carry more weight than policy, being chosen creates ownership, and drivers raise concerns with a peer they would not raise with a manager.',
+        `Manager & supervisor route ride-alongs: quarterly quota ramping ${s2rides(d)} — every driver ridden with at least once a year. Proposal to take to Safety.`,
       ],
     },
     {
@@ -1515,7 +1546,7 @@ const SpendTab = ({ d }) => {
   return (
     <>
       <PageHeader
-        eyebrow="Terminal P&L · Past to now"
+        eyebrow="Backup · Terminal P&L, past to now"
         title="Cost & Volume"
         icon={BarChart3}
         subtitle={`Terminal cost tracked against freight bills (PROs) and weight, ${rows[0].label.replace(' ', ' 20')} → ${lastLabel.replace(' ', ' 20')}. F27 started July; ${period} compared with the same months last year.`}
@@ -1861,7 +1892,7 @@ const InitiativesTab = ({ d, x }) => {
   return (
     <>
       <div className="mb-8 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 p-8 text-white shadow-xl">
-        <p className="text-sm font-semibold uppercase tracking-wider text-purple-200">F27 Cost Reduction Strategy</p>
+        <p className="text-sm font-semibold uppercase tracking-wider text-purple-200">3 · F27 Savings — outlook and plan</p>
         <h2 className="mt-1 text-3xl font-bold">F27 Savings Initiatives</h2>
         <p className="mt-2 text-lg opacity-95">
           {hasIdentified ? <><span className="font-bold text-yellow-300">{money(identified)}</span> identified per year so far</> : 'Initiatives identified'}
@@ -1996,7 +2027,7 @@ const ScaTab = ({ d, x }) => {
   return (
     <>
       <PageHeader
-        eyebrow="3 · SCA"
+        eyebrow="4 · SCA"
         icon={DollarSign}
         title="SCA — Hours, Cost per PRO & F27 Take-Out"
         subtitle={`Current status against the SCA targets and progress toward the F27 cost take-out target (target TBC). Mississauga · updated for ${s.updatedFor}.`}
@@ -2099,6 +2130,10 @@ const ScaTab = ({ d, x }) => {
         </Card>
       </div>
 
+      <Card title="How we are taking cost out" icon={Zap} className="mb-8">
+        <Bullets items={s.actions} icon={ChevronRight} color="text-purple-600" />
+      </Card>
+
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card title="Dock hours — F26 vs F27" subtitle="Company vs agency hours" icon={Users}>
           {hoursReady ? (
@@ -2165,7 +2200,7 @@ const ScaTab = ({ d, x }) => {
         </Card>
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card title="Cost per unit — the like-for-like view" icon={Package}>
           <div className="flex items-end gap-3">
             <p className="text-5xl font-bold text-gray-900"><V v={x.cpu27} fmt={(v) => money(v, 2)} /></p>
@@ -2210,9 +2245,6 @@ const ScaTab = ({ d, x }) => {
               </div>
             );
           })()}
-        </Card>
-        <Card title="How we are taking cost out" icon={Zap}>
-          <Bullets items={s.actions} icon={ChevronRight} color="text-purple-600" />
         </Card>
       </div>
 
@@ -2344,7 +2376,7 @@ const ProductivityTab = ({ d, x }) => {
   return (
     <>
       <PageHeader
-        eyebrow="4 · Productivity"
+        eyebrow="5 · Productivity"
         icon={Gauge}
         title="PPH, Units per Hour, Load Factor & CICO"
         subtitle={`Terminal productivity dashboard · ${P.period} · updated for ${P.updatedFor}`}
@@ -2447,6 +2479,45 @@ const ProductivityTab = ({ d, x }) => {
         </Card>
       </div>
 
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <LoadFactorCard lf={lf} />
+        <Card title="CICO — hours saved" subtitle="Clock-in / clock-out controls" icon={Clock}>
+          {cicoData.length ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={c.weeks} margin={{ top: 20, right: 10, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${num(v, 1)} hrs`} />
+                <Bar dataKey="hoursSaved" name="Hours saved" fill="#7c3aed" radius={[4, 4, 0, 0]}>
+                  <LabelList dataKey="hoursSaved" position="top" style={{ fontSize: 11, fill: '#374151' }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart height={200} />
+          )}
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="rounded-lg bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Hours saved</p>
+              <p className="text-xl font-bold text-gray-900">{x.cicoHasHours ? num(x.cicoHours, 1) : <Tbc small />}</p>
+            </div>
+            <div className="rounded-lg bg-green-50 p-3">
+              <p className="text-xs text-gray-500">$ saved</p>
+              <p className="text-xl font-bold text-green-700">{isNum(x.cicoValue) ? money(x.cicoValue) : <Tbc small />}</p>
+            </div>
+            <div className="rounded-lg bg-purple-50 p-3">
+              <p className="text-xs text-gray-500">Annualized</p>
+              <p className="text-xl font-bold text-purple-700">{isNum(x.cicoAnnualized) ? kMoney(x.cicoAnnualized) : <Tbc small />}</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Bullets items={c.drivers} icon={ChevronRight} color="text-purple-600" />
+          </div>
+          <Source>$ saved = hours × {isNum(c.avgHourlyRate) ? money(c.avgHourlyRate, 2) : 'TBC'}/hr (September cost per dock hour).</Source>
+        </Card>
+      </div>
+
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
         <Card title="Cost & volume — F27 vs F26" subtitle={P.period} icon={Activity} className="lg:col-span-3">
           <div className="overflow-x-auto">
@@ -2519,10 +2590,13 @@ const ProductivityTab = ({ d, x }) => {
       </div>
 
       <PdCard p={d.pd} />
+    </>
+  );
+};
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <LoadFactorCard lf={lf} />
-        <Card title="Load quality & securement" subtitle="Planned — decking and securement equipment" icon={Package}>
+// --- Terminal --------------------------------------------------------------
+const LoadQualityCard = ({ d }) => (
+        <Card title="Load quality & securement" subtitle="Planned — decking, securement and handling equipment" icon={Package} className="mb-8">
           <div className="grid grid-cols-2 gap-3">
             {[...d.loadQuality.good.map((g) => ({ ...g, ok: true })), ...d.loadQuality.poor.map((g) => ({ ...g, ok: false }))].map((ph) => (
               <figure key={ph.img} className="overflow-hidden rounded-lg border border-gray-200">
@@ -2573,57 +2647,19 @@ const ProductivityTab = ({ d, x }) => {
           <p className="mb-1 mt-4 text-sm font-semibold text-gray-700">Why</p>
           <Bullets items={d.loadQuality.benefits} />
         </Card>
-        <Card title="CICO — hours saved" subtitle="Clock-in / clock-out controls" icon={Clock}>
-          {cicoData.length ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={c.weeks} margin={{ top: 20, right: 10, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${num(v, 1)} hrs`} />
-                <Bar dataKey="hoursSaved" name="Hours saved" fill="#7c3aed" radius={[4, 4, 0, 0]}>
-                  <LabelList dataKey="hoursSaved" position="top" style={{ fontSize: 11, fill: '#374151' }} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChart height={200} />
-          )}
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="text-xs text-gray-500">Hours saved</p>
-              <p className="text-xl font-bold text-gray-900">{x.cicoHasHours ? num(x.cicoHours, 1) : <Tbc small />}</p>
-            </div>
-            <div className="rounded-lg bg-green-50 p-3">
-              <p className="text-xs text-gray-500">$ saved</p>
-              <p className="text-xl font-bold text-green-700">{isNum(x.cicoValue) ? money(x.cicoValue) : <Tbc small />}</p>
-            </div>
-            <div className="rounded-lg bg-purple-50 p-3">
-              <p className="text-xs text-gray-500">Annualized</p>
-              <p className="text-xl font-bold text-purple-700">{isNum(x.cicoAnnualized) ? kMoney(x.cicoAnnualized) : <Tbc small />}</p>
-            </div>
-          </div>
-          <div className="mt-4">
-            <Bullets items={c.drivers} icon={ChevronRight} color="text-purple-600" />
-          </div>
-          <Source>$ saved = hours × {isNum(c.avgHourlyRate) ? money(c.avgHourlyRate, 2) : 'TBC'}/hr (September cost per dock hour).</Source>
-        </Card>
-      </div>
-    </>
-  );
-};
+);
 
-// --- Terminal --------------------------------------------------------------
 const TerminalTab = ({ d }) => {
   const t = d.terminal;
   return (
     <>
       <PageHeader
-        eyebrow="5 · Physical Terminal"
+        eyebrow="6 · Load quality, equipment & terminal"
         icon={Wrench}
-        title="Status of the Physical Terminal"
-        subtitle="Terminal relocation planned — no major repair spend at the current site."
+        title="Load Quality, Equipment & the Physical Terminal"
+        subtitle="Better-loaded trailers for us and the network, and the move to a new building."
       />
+      <LoadQualityCard d={d} />
       <Card title="Terminal relocation" icon={Home}>
         <div className="flex items-start gap-4">
           <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700">

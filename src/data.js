@@ -404,7 +404,7 @@ export const DEFAULT_DATA = {
     { name: 'Hours under SCA allowance', category: 'Dock labour', annual: null, ytd: null, status: 'In progress',
       description: 'Run at or below the monthly SCA hour target (Sept 5,122 hrs).', detail: 'Sept MTD 391 hrs under allowance ≈ $13.1K; on pace for 139% of the hour-reduction target.' },
     { name: 'Load securement & decking', category: 'Linehaul / load factor', annual: null, ytd: null, status: 'Planned',
-      description: 'ANCRA decks and divider deck-board kits to use the top half of the trailer.', detail: 'LF score 36.4% F27 — every point of load factor reduces linehaul cost per lb.' },
+      description: 'ANCRA decks, divider deck-board kits and collapsible load tables — use the top half of the trailer; tables fold and stack when empty.', detail: 'LF score 36.4% F27 — every point of load factor reduces linehaul cost per lb.' },
     { name: 'Freight-handling equipment', category: 'Claims & damage', annual: null, ytd: null, status: 'Planned',
       description: 'Panel carts / racks for glass shower doors, TVs, panels, car parts.', detail: 'Damaged FB 1.61% (7-day); claims $13.4K in August.' },
     { name: 'Accessorial capture', category: 'Revenue protection', annual: null, ytd: null, status: 'In progress',
