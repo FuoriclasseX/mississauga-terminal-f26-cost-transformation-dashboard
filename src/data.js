@@ -188,7 +188,7 @@ export const DEFAULT_DATA = {
     ],
     actions: [
       'Close-out discipline: every serviced pickup scanned/closed before the driver leaves — removes "already serviced" false positives.',
-      'Daily review of the prior day\'s missed PU list by dispatch before 10:00.',
+      'Daily review of the prior day\'s missed PU list before 10:00.',
       '"Not ready" pickups re-booked the same day with the customer, and coded correctly.',
     ],
   },
@@ -371,7 +371,7 @@ export const DEFAULT_DATA = {
     ratios: [
       { label: 'Stops / trip', v: 9.92, d: 2 }, { label: 'Stops / hour', v: 2.09, d: 2 }, { label: 'Hours / trip', v: 4.75, d: 2 },
       { label: 'Bills / trip', v: 13.83, d: 2 }, { label: 'Weight / trip', v: 7017 }, { label: 'Weight / stop', v: 707 },
-      { label: 'Miles / trip', v: 109.1, d: 1 }, { label: 'Miles / hour', v: 35.13, d: 2 }, { label: 'Miles / stop', v: 16.82, d: 2 },
+      { label: 'Miles / hour', v: 35.13, d: 2 }, { label: 'Miles / stop', v: 16.82, d: 2 },
     ],
   },
 
@@ -384,7 +384,7 @@ export const DEFAULT_DATA = {
     { name: 'Dispatcher role eliminated', category: 'Admin labour', annual: 61000, ytd: null, status: 'Confirmed',
       description: 'Dispatch centralized — dispatcher seat no longer needed.', detail: 'Permanent role reduction; full-year value once effective.' },
     { name: 'Agency labour mix', category: 'Dock labour', annual: null, ytd: null, status: 'In progress',
-      description: 'Hold agency at or below 61% of dock hours (70.5% in F26 Sept).', detail: 'Agency hours 4,443 → 2,457 Sept vs F26; agency cost $130K → $75K.' },
+      description: 'Keep agency share of dock hours down (61.4% Sept MTD vs 70.5% in F26 Sept).', detail: 'Agency hours 4,443 → 2,457 Sept vs F26; agency cost $130K → $75K.' },
     { name: 'Hours under SCA allowance', category: 'Dock labour', annual: null, ytd: null, status: 'In progress',
       description: 'Run at or below the monthly SCA hour target (Sept 5,122 hrs).', detail: 'Sept MTD 391 hrs under allowance ≈ $13.1K; on pace for 139% of the hour-reduction target.' },
     { name: 'Load securement & decking', category: 'Linehaul / load factor', annual: null, ytd: null, status: 'Planned',
@@ -589,7 +589,7 @@ export const DEFAULT_DATA = {
   // Rows with an empty item are hidden.
   // --------------------------------------------------------------------------
   terminal: {
-    relocation: 'Moving to a new building by year end — most likely before 2027.',
+    relocation: 'Moving to a new building — expected before the end of calendar 2026.',
     relocationNote: 'No major repair spend planned at the current site; the focus is a clean transition with no service disruption.',
   },
 
