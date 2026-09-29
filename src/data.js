@@ -570,12 +570,12 @@ export const DEFAULT_DATA = {
   // --------------------------------------------------------------------------
   loadQuality: {
     good: [
-      { img: '/img/load-decked-570260.jpg', caption: 'Trailer 570260 — deck beam builds a second tier over palletized freight' },
-      { img: '/img/load-deckboard-470275.jpg', caption: 'Trailer 470275 — deck board overhead, strap securing the load' },
+      { img: '/img/load-decked-570260.jpg', caption: 'Deck beam builds a second tier over palletized freight' },
+      { img: '/img/load-deckboard-470275.jpg', caption: 'Deck board overhead, strap securing the load' },
     ],
     poor: [
-      { img: '/img/load-loose-470236.jpg', caption: 'Trailer 470236 — freight loose and stacked on a diagonal: damage risk, wasted cube' },
-      { img: '/img/load-floor-only-570419.jpg', caption: 'Trailer 570419 — floor-loaded only, upper half of the trailer empty' },
+      { img: '/img/load-loose-470236.jpg', caption: 'Freight loose and stacked on a diagonal: damage risk, wasted cube' },
+      { img: '/img/load-floor-only-570419.jpg', caption: 'Floor-loaded only, upper half of the trailer empty' },
     ],
     equipment: [
       'ANCRA knock-down pallet decks (intermodal) — second tier over short or fragile freight',
@@ -584,10 +584,10 @@ export const DEFAULT_DATA = {
       'Load bars and straps on every mixed load',
     ],
     glassPhotos: [
-      { img: '/img/glass-aframe-57937.jpg', caption: 'Trailer 57937 — glass shower doors on improvised wooden A-frames' },
+      { img: '/img/glass-aframe-57937.jpg', caption: 'Glass shower doors on improvised wooden A-frames' },
       { img: '/img/glass-leaning.jpg', caption: 'Shower door boxes leaning and toppling into each other in transit' },
     ],
-    useCase: 'Example: MAAX shower doors and bases (thin, all glass) and 75" TVs currently ride standing loose in the trailer (trailer 47520). Slot them into panel carts instead — the yellow cart rolls in and out by hand, the grey cage is picked up by forklift. Secured in transit, faster to load and unload, far less breakage.',
+    useCase: 'Example: MAAX shower doors and bases (thin, all glass) and 75" TVs currently ride standing loose in the trailer. Slot them into panel carts instead — the yellow cart rolls in and out by hand, the grey cage is picked up by forklift. Secured in transit, faster to load and unload, far less breakage.',
     collapsible: {
       photos: [
         { img: '/img/collapsible-extended.jpg', caption: 'Extended — second tier in the trailer' },
