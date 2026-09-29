@@ -51,7 +51,7 @@ export const DEFAULT_DATA = {
       { name: 'Load securement & decking — ANCRA knock-down pallet decks and security divider deck-board kits', status: 'Planned', note: 'Second tier over short/fragile freight, loads locked in place — no freight falling when doors open (see Productivity)' },
       { name: 'Driver safety reps — top safety-score drivers join the monthly safety meeting and speak for drivers', status: 'Planned', note: 'Proposal to take to Safety' },
       { name: 'Manager & supervisor route ride-alongs — quarterly quota, ramping up', status: 'Planned', note: 'Proposal to take to Safety' },
-      { name: 'Peak-period onboarding — Safety dept supports training and on-the-job spot checks for new dock, general labour and forklift staff', status: 'Planned', note: 'Proposal to take to Safety — peak adds 10–20% more staff on every shift' },
+      { name: 'Peak-period onboarding with the Safety team — SWP review, check-ins and spot checks for new temp (agency) staff', status: 'Planned', note: 'Supported by Safety — November and spring/summer e-commerce peaks' },
       { name: 'Tailgates + safety moments after every incident (e.g. pinch points)', status: 'Active' },
       { name: 'Forklift pre/post-shift inspections by every operator', status: 'Active' },
       { name: 'No loading forklifts on straight trucks', status: 'Active' },
@@ -62,13 +62,13 @@ export const DEFAULT_DATA = {
     ],
     // Ideas to action (drafts — edit freely)
     // Driver-led safety — proposal to take to Safety (OHS)
+    quote: 'If we prioritize safety, then service, productivity and cost all fall into place. When a workplace is safe and people feel heard and respected, the rest follows.',
     driverProgram: {
       drivers: 50,                 // example fleet size — set to the actual Mississauga driver count
       rampPct: [0.6, 0.8, 1],      // Q2, Q3, Q4 as a share of full pace (every driver once a year)
       rampLabels: ['Q2 (Oct–Dec)', 'Q3 (Jan–Mar)', 'Q4 (Apr–Jun)'],
     },
     ideas: [
-      'Agency safety onboarding: site orientation, buddy for first shifts and forklift-cert check before day one — agency is ~61% of dock hours.',
       'New-building safety plan: pre-move hazard walk, dock door / leveler / lighting inspection, traffic and pedestrian plan, layout training before go-live.',
       'Near-miss reporting: every near miss logged and reviewed at the next tailgate; monthly trend at JHSC.',
       'Pedestrian–forklift separation: marked walkways and blue-spot lights on forklifts.',

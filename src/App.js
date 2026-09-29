@@ -318,6 +318,80 @@ const TABS = [
   { id: 'qa', label: 'Q&A', icon: ClipboardCheck },
 ];
 
+// ---------------------------------------------------------------------------
+// Initiative tracker — status dropdown + stage progress (saved in this browser)
+// ---------------------------------------------------------------------------
+const STAGES = {
+  safety: [
+    { k: 'Pending', p: 10, color: '#9ca3af' },
+    { k: 'Planned', p: 25, color: '#d97706' },
+    { k: 'In progress', p: 60, color: '#2563eb' },
+    { k: 'Completed', p: 100, color: '#059669' },
+    { k: 'Active', p: 100, color: '#7c3aed', hint: 'ongoing' },
+  ],
+  savings: [
+    { k: 'Pending', p: 10, color: '#9ca3af' },
+    { k: 'Planned', p: 25, color: '#d97706' },
+    { k: 'In progress', p: 60, color: '#2563eb' },
+    { k: 'Confirmed', p: 100, color: '#059669' },
+  ],
+};
+const stageOf = (stages, v) => stages.find((st) => st.k === v) || stages[0];
+
+const StatusSelect = ({ value, stages, onChange }) => {
+  const st = stageOf(stages, value);
+  return (
+    <select
+      value={st.k}
+      onChange={(e) => onChange(e.target.value)}
+      className="cursor-pointer rounded-full border-2 bg-white px-3 py-1 text-xs font-semibold focus:outline-none"
+      style={{ borderColor: st.color, color: st.color }}
+      title="Change status"
+    >
+      {stages.map((o) => (
+        <option key={o.k} value={o.k}>{o.k}{o.hint ? ` (${o.hint})` : ''}</option>
+      ))}
+    </select>
+  );
+};
+
+const StageBar = ({ value, stages }) => {
+  const st = stageOf(stages, value);
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
+        <div className="h-2 rounded-full transition-all duration-500" style={{ width: `${st.p}%`, background: st.color }} />
+      </div>
+      <span className="w-9 text-right text-xs font-semibold" style={{ color: st.color }}>{st.p}%</span>
+    </div>
+  );
+};
+
+const StatusSummary = ({ items, stages, doneKeys }) => {
+  const total = items.length;
+  const done = items.filter((i) => doneKeys.includes(stageOf(stages, i.status).k)).length;
+  const counts = stages.map((st) => ({ ...st, n: items.filter((i) => stageOf(stages, i.status).k === st.k).length })).filter((c) => c.n);
+  return (
+    <div className="mb-4">
+      <div className="mb-1 flex items-baseline justify-between text-sm">
+        <span className="font-semibold text-gray-800">{done} of {total} actioned</span>
+        <span className="text-xs text-gray-500">Stage progress · change status with the dropdown</span>
+      </div>
+      <div className="flex h-3 overflow-hidden rounded-full bg-gray-100">
+        {counts.map((c) => <div key={c.k} style={{ width: `${(c.n / total) * 100}%`, background: c.color }} title={`${c.k}: ${c.n}`} />)}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-600">
+        {counts.map((c) => (
+          <span key={c.k} className="flex items-center gap-1">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: c.color }} />
+            {c.k} {c.n}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // --- Overview --------------------------------------------------------------
 const OverviewTab = ({ d, x, go }) => {
   const fp = fiscalProgress();
@@ -339,7 +413,8 @@ const OverviewTab = ({ d, x, go }) => {
         </p>
         <h2 className="mt-2 text-4xl font-bold">{d.meta.terminal} Terminal</h2>
         <p className="mt-3 max-w-4xl text-lg leading-relaxed opacity-95">
-          September to date the dock is running at{' '}
+          <span className="font-bold text-green-400">Safety first: zero recordables in F27</span> — TRIR {isNum(d.safety.trirF27Ytd) ? num(d.safety.trirF27Ytd, 2) : '—'} vs{' '}
+          {isNum(d.safety.trirF26) ? num(d.safety.trirF26, 2) : '—'} in F26, {isNum(x.daysSinceRecordable) ? num(x.daysSinceRecordable) : '—'} days since the last recordable. September to date the dock is running at{' '}
           <span className="font-bold text-green-400">{isNum(x.wdPctUsed) ? `${pct(x.wdPctUsed)} of its SCA hour allowance` : 'under its SCA hour allowance'}</span>, cost per unit is{' '}
           <span className="font-bold text-green-400">{x.cpuVsLy ? `down ${pct(Math.abs(x.cpuVsLy.pct))} vs F26` : 'down vs F26'}</span>, units per hour are{' '}
           <span className="font-bold text-green-400">{x.uphVsLy ? `up ${pct(x.uphVsLy.pct)}` : 'up'}</span>, and overtime is only{' '}
@@ -496,7 +571,7 @@ const OverviewTab = ({ d, x, go }) => {
 };
 
 // --- Safety ----------------------------------------------------------------
-const SafetyTab = ({ d, x }) => {
+const SafetyTab = ({ d, x, onSet }) => {
   const s = d.safety;
   const trirGood = allNum(s.trirF27Ytd, s.trirTarget) ? s.trirF27Ytd <= s.trirTarget : allNum(s.trirF27Ytd, s.trirF26) ? s.trirF27Ytd <= s.trirF26 : null;
   return (
@@ -516,6 +591,11 @@ const SafetyTab = ({ d, x }) => {
           </p>
         </div>
       )}
+      {s.quote && (
+        <blockquote className="mb-8 rounded-xl border-l-4 border-purple-600 bg-purple-50 p-5 text-lg italic text-purple-900 shadow">
+          “{s.quote}”
+        </blockquote>
+      )}
       <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-5">
         <Kpi
           icon={Shield}
@@ -529,20 +609,19 @@ const SafetyTab = ({ d, x }) => {
         <Kpi icon={CheckCircle} tone="green" label="Days since last recordable" value={<V v={x.daysSinceRecordable} fmt={num} />} sub={s.lastRecordableDate ? `Last: Sep 10, 2025` : null} />
       </div>
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
-        <Card title="Safety initiatives — status" icon={ClipboardCheck} className="lg:col-span-3">
-          <div className="mb-3 flex gap-2">
-            <Chip tone="green">{s.initiatives.filter((i) => i.status === 'Completed').length} completed</Chip>
-            <Chip tone="blue">{s.initiatives.filter((i) => i.status === 'Active').length} active</Chip>
-            <Chip tone="amber">{s.initiatives.filter((i) => i.status === 'Planned').length} planned</Chip>
-          </div>
+        <Card title="Safety initiatives — tracker" subtitle="Pending → Planned → In progress → Completed / Active" icon={ClipboardCheck} className="lg:col-span-3">
+          <StatusSummary items={s.initiatives} stages={STAGES.safety} doneKeys={['Completed', 'Active']} />
           <ul className="space-y-2">
-            {s.initiatives.map((i) => (
-              <li key={i.name} className="flex items-start justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2">
-                <span className="text-sm text-gray-800">
-                  {i.name}
-                  {i.note && <span className="block text-xs text-gray-500">{i.note}</span>}
-                </span>
-                <Chip tone={i.status === 'Completed' ? 'green' : i.status === 'Planned' ? 'amber' : 'blue'}>{i.status}</Chip>
+            {s.initiatives.map((i, idx) => (
+              <li key={i.name} className="rounded-lg bg-gray-50 px-3 py-2">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-sm text-gray-800">
+                    {i.name}
+                    {i.note && <span className="block text-xs text-gray-500">{i.note}</span>}
+                  </span>
+                  <StatusSelect value={i.status} stages={STAGES.safety} onChange={(v) => onSet(`safety.initiatives.${idx}.status`, v)} />
+                </div>
+                <div className="mt-1.5"><StageBar value={i.status} stages={STAGES.safety} /></div>
               </li>
             ))}
           </ul>
@@ -612,11 +691,44 @@ const SafetyTab = ({ d, x }) => {
           </div>
         </div>
         <div className="mt-8 border-t border-gray-100 pt-6">
-          <p className="text-base font-bold text-gray-800">3 · Peak-period onboarding — Safety department on the floor</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-base font-bold text-gray-800">3 · Peak-period onboarding — with the Safety team</p>
+            <Chip tone="green">Supported by Safety</Chip>
+          </div>
           <p className="mt-1 text-sm text-gray-700">
-            In peak we hire 10–20% more staff across all shifts — dock workers, general labour and forklift operators. The Safety representative helps with training
-            material and does on-the-job spot checks, as an added layer on top of the checks operations management already does.
+            We ramp up temp (agency) labour for the e-commerce peaks — November and spring/summer — hiring 10–20% more staff across all shifts: dock workers,
+            general labour and forklift operators. The Safety team will be part of phasing in new temp workers, as an added layer on top of the checks
+            operations management already does.
           </p>
+          <div className="mt-4 grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <div>
+              <p className="mb-2 text-sm font-semibold text-gray-700">What Safety covers with new staff</p>
+              <Bullets
+                icon={ChevronRight}
+                color="text-purple-600"
+                items={[
+                  'Safe Work Practices (SWPs) for their job.',
+                  'Lifting guidelines and techniques.',
+                  'Truck and trailer pull safety.',
+                  'Forklift safety — including the seat belt, every time.',
+                  'Right to refuse unsafe work.',
+                ]}
+              />
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-semibold text-gray-700">Check-ins — short questions and feedback</p>
+              <Bullets
+                icon={ChevronRight}
+                color="text-purple-600"
+                items={[
+                  '“Have you been wearing your seat belt getting on and off the forklift?”',
+                  '“If there is a spill, what do you do?” — stop and see the supervisor.',
+                  '“Do you know you can refuse unsafe work?”',
+                  '“Is anything slowing you down or feeling unsafe?” — feedback goes to the supervisor and the monthly safety meeting.',
+                ]}
+              />
+            </div>
+          </div>
           <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">How the extra layer helps</p>
           <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
             <Bullets
@@ -634,7 +746,7 @@ const SafetyTab = ({ d, x }) => {
               items={[
                 'Supervisors stay focused on running peak while coaching still happens on the floor.',
                 'Spot checks coach, not discipline — habits form in the first weeks, so correcting early prevents injuries.',
-                'Shows safety is owned by operations and Safety together — it builds the culture.',
+                'People who feel cared for, care — new staff see that safety is owned by operations and Safety together.',
               ]}
             />
           </div>
@@ -1471,7 +1583,8 @@ const QaTab = ({ d, x }) => {
       a: [
         'Driver safety reps: top safety-score drivers join the monthly safety meeting and speak for drivers — peers carry more weight than policy, being chosen creates ownership, and drivers raise concerns with a peer they would not raise with a manager.',
         `Manager & supervisor route ride-alongs: quarterly quota ramping ${s2rides(d)} — every driver ridden with at least once a year. Proposal to take to Safety.`,
-        'Peak-period onboarding: we hire 10–20% more staff on every shift in peak — the Safety representative supports training material and on-the-job spot checks for new dock, general labour and forklift staff, an added layer on top of operations checks.',
+        'Peak-period onboarding, supported by the Safety team: for the November and spring/summer e-commerce peaks (10–20% more temp staff on every shift), Safety helps phase in new workers — SWPs, lifting technique, truck and trailer pull safety, forklift safety and seat belts, right to refuse unsafe work — with check-ins and spot checks on top of operations checks.',
+        `“${d.safety.quote}”`,
       ],
     },
     {
@@ -1513,6 +1626,7 @@ const STATUS_STYLE = {
   Confirmed: { card: 'border-green-200 bg-gradient-to-r from-green-50 to-green-100', chip: 'green', color: '#059669' },
   'In progress': { card: 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100', chip: 'blue', color: '#2563eb' },
   Planned: { card: 'border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100', chip: 'amber', color: '#d97706' },
+  Pending: { card: 'border-gray-200 bg-gray-50', chip: 'gray', color: '#9ca3af' },
   Opportunity: { card: 'border-gray-200 bg-gray-50', chip: 'gray', color: '#6b7280' },
 };
 const PIE_COLORS = ['#7c3aed', '#06b6d4', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#6366f1'];
@@ -1906,7 +2020,7 @@ const SavingsOutlook = ({ d, identified }) => {
   );
 };
 
-const InitiativesTab = ({ d, x }) => {
+const InitiativesTab = ({ d, x, onSet }) => {
   const items = d.initiatives.filter((i) => i.name);
   const target = d.sca.f27SavingsTarget;
   const identified = sum(items.map((i) => i.annual));
@@ -1990,7 +2104,8 @@ const InitiativesTab = ({ d, x }) => {
         </Card>
       </div>
 
-      <Card title="Cost reduction initiatives" subtitle="Status, value and share of identified savings" icon={Target}>
+      <Card title="Cost reduction initiatives — tracker" subtitle="Pending → Planned → In progress → Confirmed · value and share of identified savings" icon={Target}>
+        <StatusSummary items={items} stages={STAGES.savings} doneKeys={['Confirmed']} />
         <div className="space-y-4">
           {items.map((i) => {
             const st = STATUS_STYLE[i.status] || STATUS_STYLE.Opportunity;
@@ -2013,7 +2128,8 @@ const InitiativesTab = ({ d, x }) => {
                       <p className="text-lg font-semibold text-gray-500">$ to be sized</p>
                     )}
                     {isNum(i.ytd) && <p className="mt-1 text-xs text-gray-500">Realized YTD {money(i.ytd)}</p>}
-                    <span className="mt-3 inline-block"><Chip tone={st.chip}>{i.status}</Chip></span>
+                    <div className="mt-3 flex justify-end"><StatusSelect value={i.status} stages={STAGES.savings} onChange={(v) => onSet(`initiatives.${d.initiatives.indexOf(i)}.status`, v)} /></div>
+                    <div className="mt-2 w-40"><StageBar value={i.status} stages={STAGES.savings} /></div>
                   </div>
                 </div>
               </div>
@@ -2947,12 +3063,12 @@ const App = () => {
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         {tab === 'overview' && <OverviewTab d={data} x={x} go={go} />}
-        {tab === 'safety' && <SafetyTab d={data} x={x} />}
+        {tab === 'safety' && <SafetyTab d={data} x={x} onSet={onChange} />}
         {tab === 'service' && <ServiceTab d={data} x={x} />}
         {tab === 'sca' && <ScaTab d={data} x={x} />}
         {tab === 'spend' && <SpendTab d={data} />}
         {tab === 'productivity' && <ProductivityTab d={data} x={x} />}
-        {tab === 'initiatives' && <InitiativesTab d={data} x={x} />}
+        {tab === 'initiatives' && <InitiativesTab d={data} x={x} onSet={onChange} />}
         {tab === 'terminal' && <TerminalTab d={data} x={x} />}
         {tab === 'f26' && <F26Tab d={data} />}
         {tab === 'qa' && <QaTab d={data} x={x} />}
