@@ -580,6 +580,21 @@ export const DEFAULT_DATA = {
       { img: '/img/glass-leaning.jpg', caption: 'Shower door boxes leaning and toppling into each other in transit' },
     ],
     useCase: 'Example: MAAX shower doors and bases (thin, all glass) and 75" TVs currently ride standing loose in the trailer (trailer 47520). Slot them into panel carts instead — the yellow cart rolls in and out by hand, the grey cage is picked up by forklift. Secured in transit, faster to load and unload, far less breakage.',
+    collapsible: {
+      photos: [
+        { img: '/img/collapsible-extended.jpg', caption: 'Extended — second tier in the trailer' },
+        { img: '/img/collapsible-folded.jpg', caption: 'Folded — lifted by forklift' },
+        { img: '/img/collapsible-stackable.jpg', caption: 'Stacked — small footprint when not in use' },
+      ],
+      problem: 'Today our load tables are large fixed metal tables that take up dock space when not in use.',
+      points: [
+        'Fold flat and stack when empty — frees dock space here, and smaller terminals can store them.',
+        'Forklift picks them up extended or folded — less manual handling, faster unload.',
+        'Network benefit: our outbound trailers unload faster and cleaner at the receiving terminals across the country; same for their inbound trailers to us.',
+        'With yellow and grey bin carts, freight rolls straight out of the trailer and is staged for final mile or transfer.',
+        'Fewer damages and claims, less handling, safer unloading.',
+      ],
+    },
     benefits: [
       'Uses the top half of the trailer — lifts load factor (LF score 36.4% F27)',
       'Less shifting and crushing — fewer damaged freight bills (1.61% 7-day avg) and claims',
