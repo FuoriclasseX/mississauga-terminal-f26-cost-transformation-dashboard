@@ -313,6 +313,7 @@ const TABS = [
   { id: 'productivity', label: 'Productivity', icon: Gauge },
   { id: 'terminal', label: 'Terminal', icon: Wrench },
   { id: 'f26', label: 'F26 Recap', icon: Calendar },
+  { id: 'qa', label: 'Q&A', icon: ClipboardCheck },
 ];
 
 // --- Overview --------------------------------------------------------------
@@ -1191,6 +1192,151 @@ const LoadFactorCard = ({ lf }) => {
   );
 };
 
+// --- Q&A prep — answers to the questions leadership is likely to ask ----------
+const QaTab = ({ d, x }) => {
+  const s = d.sca;
+  const p = d.productivity;
+  const lab = d.labour;
+  const o = d.ots;
+  const f = (v, fmt, fallback = 'TBC') => (isNum(v) ? fmt(v) : fallback);
+  const perWd = allNum(s.f27TotalCost, s.wdMtd) && s.wdMtd > 0 ? s.f27TotalCost / s.wdMtd : null;
+  const projSept = allNum(perWd, s.wdMonth) ? perWd * s.wdMonth : null;
+  const projVsF26 = allNum(projSept, s.f26TotalCost) ? ((projSept - s.f26TotalCost) / s.f26TotalCost) * 100 : null;
+  const agencyCostShare27 = allNum(s.f27AgencyCost, s.f27TotalCost) ? (s.f27AgencyCost / s.f27TotalCost) * 100 : null;
+  const agencyCostShare26 = allNum(s.f26AgencyCost, s.f26TotalCost) ? (s.f26AgencyCost / s.f26TotalCost) * 100 : null;
+  const agencyHrsShare27 = allNum(s.f27AgencyHours, s.f27Hours) ? (s.f27AgencyHours / s.f27Hours) * 100 : null;
+  const agencyHrsShare26 = allNum(s.f26AgencyHours, s.f26Hours) ? (s.f26AgencyHours / s.f26Hours) * 100 : null;
+  const identified = x.initHasAnnual ? x.initAnnual : null;
+  const latest = x.otsLatest;
+  const reductionValue = allNum(s.hourReductionTarget, p.f27.hourlyRate) ? s.hourReductionTarget * p.f27.hourlyRate : null;
+  const monthsLeft = 9; // Oct 2026 – Jun 2027
+  const gap = allNum(s.f27SavingsTarget) ? s.f27SavingsTarget - (identified || 0) : null;
+  const gapPerMonth = isNum(gap) ? gap / monthsLeft : null;
+
+  const qa = [
+    {
+      q: 'What is your SCA target?',
+      a: [
+        `September SCA target: ${f(s.scaTargetHours, num)} dock hours — F26 September ${f(s.f26Hours, num)} hrs less the ${f(s.hourReductionTarget, num)}-hour reduction target.`,
+        `Daily: ${f(s.wdTargetPerDay, num)} hours per working day (${f(s.cdTargetPerDay, num)} per calendar day).`,
+        `Cost per PRO target: ${f(s.costPerProTarget, (v) => money(v, 2))}.`,
+      ],
+    },
+    {
+      q: 'How are you tracking against target?',
+      a: [
+        `${f(s.f27Hours, num)} hours used vs ${f(s.wdAllowable, num)} allowed month-to-date = ${f(x.wdPctUsed, (v) => pct(v))} of allowance — ${f(x.hoursUnder, num)} hours under (≈${f(x.hoursUnderValue, kMoney)}).`,
+        `On pace for ≈${f(x.paceHours, num)} hours in September vs the ${f(s.scaTargetHours, num)} target — ${f(x.paceVsReductionTarget, (v) => pct(v, 0))} of the hour-reduction target.`,
+        `Cost per PRO ${f(s.costPerProMtd, (v) => money(v, 2))} vs ${f(s.costPerProTarget, (v) => money(v, 2))} = ${f(x.cppPctOfTarget, (v) => pct(v))} of target (amber watch band).`,
+      ],
+    },
+    {
+      q: 'How are you tracking to the year-end goal?',
+      a: [
+        `F27 cost take-out target: ${f(s.f27SavingsTarget, money)}.`,
+        `Identified so far: ${f(identified, money)} per year — dispatcher role eliminated with dispatch centralized. More initiatives in development.`,
+        `Run-rate evidence: cost per unit ${f(x.cpu26, (v) => money(v, 2))} → ${f(x.cpu27, (v) => money(v, 2))} (≈${f(x.cpuSavings, kMoney)} avoided in September to date), hours under SCA allowance, agency share down.`,
+      ],
+      calc: true,
+    },
+    {
+      q: 'What savings are needed to hit your goals?',
+      a: [
+        `SCA hours: September requires ${f(s.hourReductionTarget, num)} fewer dock hours than F26 September (≈${f(reductionValue, kMoney)} at ${f(p.f27.hourlyRate, (v) => money(v, 2))}/hr). We are on pace for ≈${f(x.paceReduction, num)} — ${f(x.paceVsReductionTarget, (v) => pct(v, 0))} of the requirement.`,
+        `Cost per PRO: stay under ${f(s.costPerProTarget, (v) => money(v, 2))} — currently ${f(x.cppUnder, (v) => money(v, 2))} under on every PRO.`,
+        isNum(s.f27SavingsTarget)
+          ? `F27 take-out: ${money(s.f27SavingsTarget)} target − ${f(identified, money, '$0')} identified = ${money(gap)} still to find ≈ ${money(gapPerMonth)} per month over the ${monthsLeft} months left (Oct–Jun).`
+          : `F27 take-out target: TBC — gap = target − ${f(identified, money, '$0')} identified, spread over the ${monthsLeft} months left (Oct–Jun). Enter the target in Edit data and this line calculates itself.`,
+      ],
+      calc: true,
+    },
+    {
+      q: 'What is your spend rate?',
+      a: [
+        `Dock labour ${f(s.f27TotalCost, money)} September MTD over ${f(s.wdMtd, num)} working days ≈ ${f(perWd, money)} per working day.`,
+        `Projected September ≈ ${f(projSept, kMoney)} vs ${f(s.f26TotalCost, kMoney)} F26 September (${f(projVsF26, (v) => pct(v, 0))}).`,
+        `Cost per dock hour ${f(p.f27.hourlyRate, (v) => money(v, 2))} (${x.rateVsLy ? signed(x.rateVsLy.pct, (v) => pct(v)) : '—'} YoY — wage rate); cost per unit ${f(x.cpu27, (v) => money(v, 2))} vs ${f(x.cpu26, (v) => money(v, 2))}.`,
+      ],
+      calc: true,
+    },
+    {
+      q: 'How much agency labour are you using?',
+      a: [
+        `Agency is ${f(agencyHrsShare27, (v) => pct(v))} of dock hours (${f(s.f27AgencyHours, num)} of ${f(s.f27Hours, num)}) vs ${f(agencyHrsShare26, (v) => pct(v))} in F26 September.`,
+        `Agency cost ${f(s.f27AgencyCost, money)} = ${f(agencyCostShare27, (v) => pct(v, 0))} of dock labour vs ${f(agencyCostShare26, (v) => pct(v, 0))} in F26 September.`,
+      ],
+      calc: true,
+    },
+    {
+      q: 'What about overtime?',
+      a: [
+        `September: ${f(p.f27.otHours, num)} OT hours (${f(p.f27.otPct, (v) => pct(v))} of dock hours).`,
+        `Q1 company employees: ${f(lab.f27.otHours, (v) => num(v, 1))} OT hours, ${f(lab.f27.otPct, (v) => pct(v))} of hours (F26 Q1 ${f(lab.f26.otHours, (v) => num(v, 1))}).`,
+      ],
+    },
+    {
+      q: 'Why is PPH below goal?',
+      a: [
+        `PPH ${f(p.f27.pph, num)} vs ${f(p.f27.pphGoal, num)} goal (${x.pphVsGoal ? pct(x.pphVsGoal.pct) : '—'}); flat vs F26 (${f(p.f26.pph, num)}).`,
+        `Freight got lighter — ${f(p.f27.lbsPerUnit, num)} vs ≈${f(x.lbsPerUnitF26, num)} lbs per unit — while units per hour rose ${x.uphVsLy ? pct(x.uphVsLy.pct) : '—'}.`,
+        'Levers: load factor (Toyota baseload footage capture being fixed), consolidation on light lanes, shift start/end aligned to P&D.',
+      ],
+    },
+    {
+      q: 'Why are Terminal Admin hours up?',
+      a: [
+        `Q1 admin hours ${f(lab.f26.adminHours, num)} → ${f(lab.f27.adminHours, num)}; admin cost ${f(lab.f26.adminRegCost, money)} → ${f(lab.f27.adminRegCost, money)}.`,
+        'F26 was the unusually low year — F27 is still below F24 (≈$21.5K) and F25 (≈$22.7K) for the same quarter.',
+      ],
+    },
+    {
+      q: 'How is service?',
+      a: [
+        `Adjusted on-time ${latest ? pct(latest.incl) : '—'} in ${latest ? latest.label : '—'} (${latest ? pct(latest.excl) : '—'} excluding partner carriers) vs ${f(o.target, (v) => pct(v, 0))} target; last 7 days ${f(o.last7Pct, (v) => pct(v, 2))}.`,
+        `Missed pickups ${f(d.missedPu.missedPct, (v) => pct(v, 2))} overall, ${f(d.missedPu.last7Pct, (v) => pct(v, 2))} last 7 days — 45% are OPS false positives (close-out fix).`,
+      ],
+    },
+    {
+      q: 'How is safety?',
+      a: [
+        `Zero recordable incidents in F27 to date — TRIR ${f(d.safety.trirF27Ytd, (v) => num(v, 2))} vs ${f(d.safety.trirF26, (v) => num(v, 2))} in F26.`,
+        `${f(x.daysSinceRecordable, num)} days since the last recordable (Sep 10, 2025).`,
+      ],
+    },
+    {
+      q: 'What about the building?',
+      a: [d.terminal.relocation, d.terminal.relocationNote].filter(Boolean),
+    },
+  ];
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Backup"
+        icon={ClipboardCheck}
+        title="Q&A — likely questions"
+        subtitle="Answers pulled from the same numbers as the dashboard. Click a question to open it."
+      />
+      <div className="space-y-3">
+        {qa.map((item, i) => (
+          <details key={item.q} open={i < 2} className="rounded-xl bg-white shadow-lg">
+            <summary className="cursor-pointer select-none px-6 py-4 text-lg font-semibold text-gray-800">{item.q}</summary>
+            <ul className="space-y-2 px-6 pb-5">
+              {item.a.map((line, j) => (
+                <li key={j} className="flex gap-3 text-gray-700">
+                  <ChevronRight className="mt-0.5 h-5 w-5 flex-shrink-0 text-purple-600" />
+                  <span>{line}</span>
+                </li>
+              ))}
+              {item.calc && <li className="pl-8 text-xs italic text-gray-500">Some figures calculated from the SCA and productivity reports.</li>}
+            </ul>
+          </details>
+        ))}
+      </div>
+    </>
+  );
+};
+
 // --- SCA & Savings ---------------------------------------------------------
 const ScaTab = ({ d, x }) => {
   const s = d.sca;
@@ -2046,6 +2192,7 @@ const App = () => {
         {tab === 'productivity' && <ProductivityTab d={data} x={x} />}
         {tab === 'terminal' && <TerminalTab d={data} x={x} />}
         {tab === 'f26' && <F26Tab d={data} />}
+        {tab === 'qa' && <QaTab d={data} x={x} />}
 
         {/* Section pager */}
         <div className="mt-10 flex items-center justify-between">
