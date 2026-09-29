@@ -2745,59 +2745,98 @@ const ProductivityTab = ({ d, x }) => {
 };
 
 // --- Terminal --------------------------------------------------------------
-const LoadQualityCard = ({ d }) => (
-        <Card title="Load quality & securement" subtitle="Planned — decking, securement and handling equipment" icon={Package} className="mb-8">
-          <div className="grid grid-cols-2 gap-3">
-            {[...d.loadQuality.good.map((g) => ({ ...g, ok: true })), ...d.loadQuality.poor.map((g) => ({ ...g, ok: false }))].map((ph) => (
-              <figure key={ph.img} className="overflow-hidden rounded-lg border border-gray-200">
-                <div className="relative">
-                  <img src={ph.img} alt={ph.caption} className="h-44 w-full object-cover" loading="lazy" />
-                  <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold text-white ${ph.ok ? 'bg-green-600' : 'bg-red-600'}`}>
-                    {ph.ok ? 'Good practice' : 'Needs fixing'}
-                  </span>
-                </div>
-                <figcaption className="p-2 text-xs text-gray-600">{ph.caption}</figcaption>
-              </figure>
-            ))}
-          </div>
-          {d.loadQuality.useCase && (
-            <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-              <p>{d.loadQuality.useCase}</p>
-              {d.loadQuality.glassPhotos && (
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  {d.loadQuality.glassPhotos.map((ph) => (
-                    <figure key={ph.img} className="overflow-hidden rounded-lg border border-amber-200 bg-white">
-                      <img src={ph.img} alt={ph.caption} className="h-40 w-full object-cover" loading="lazy" />
-                      <figcaption className="p-2 text-xs text-gray-600">{ph.caption}</figcaption>
-                    </figure>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {d.loadQuality.collapsible && (
-            <div className="mt-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
-              <p className="text-sm font-semibold text-purple-900">Collapsible load tables — for us and the terminals that unload our trailers</p>
-              <p className="mt-1 text-sm text-purple-900">{d.loadQuality.collapsible.problem}</p>
-              <div className="mt-3 grid grid-cols-3 gap-3">
-                {d.loadQuality.collapsible.photos.map((ph) => (
-                  <figure key={ph.img} className="overflow-hidden rounded-lg border border-purple-200 bg-white">
-                    <img src={ph.img} alt={ph.caption} className="h-36 w-full object-cover" loading="lazy" />
-                    <figcaption className="p-2 text-xs text-gray-600">{ph.caption}</figcaption>
-                  </figure>
-                ))}
-              </div>
-              <div className="mt-3 text-sm">
-                <Bullets items={d.loadQuality.collapsible.points} icon={ChevronRight} color="text-purple-600" />
-              </div>
-            </div>
-          )}
-          <p className="mb-1 mt-4 text-sm font-semibold text-gray-700">Equipment</p>
-          <Bullets items={d.loadQuality.equipment} icon={ChevronRight} color="text-purple-600" />
-          <p className="mb-1 mt-4 text-sm font-semibold text-gray-700">Why</p>
-          <Bullets items={d.loadQuality.benefits} />
-        </Card>
+const Photo = ({ ph, h = 'h-72', onZoom, badge }) => (
+  <figure className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+    <button type="button" onClick={() => onZoom(ph)} className="relative block w-full bg-gray-100" title="Click to enlarge">
+      <img src={ph.img} alt={ph.caption} className={`${h} w-full object-contain`} loading="lazy" />
+      {badge}
+    </button>
+    <figcaption className="p-2 text-xs text-gray-600">{ph.caption}</figcaption>
+  </figure>
 );
+
+const LoadQualityCard = ({ d }) => {
+  const [zoom, setZoom] = useState(null);
+  const lq = d.loadQuality;
+  const productIcon = [Package, BarChart3, Shield, Truck, Package, Wrench];
+  return (
+    <Card title="Load quality & securement" subtitle="Today's loads, the equipment we plan to use, and why · click any photo to enlarge" icon={Package} className="mb-8">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[...lq.good.map((g) => ({ ...g, ok: true })), ...lq.poor.map((g) => ({ ...g, ok: false }))].map((ph) => (
+          <Photo
+            key={ph.img}
+            ph={ph}
+            onZoom={setZoom}
+            badge={
+              <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold text-white ${ph.ok ? 'bg-green-600' : 'bg-red-600'}`}>
+                {ph.ok ? 'Good practice' : 'Needs fixing'}
+              </span>
+            }
+          />
+        ))}
+      </div>
+      {lq.useCase && (
+        <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+          <p>{lq.useCase}</p>
+          {lq.glassPhotos && (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {lq.glassPhotos.map((ph) => <Photo key={ph.img} ph={ph} onZoom={setZoom} />)}
+            </div>
+          )}
+        </div>
+      )}
+      {lq.products && (
+        <div className="mt-6">
+          <p className="mb-3 text-base font-bold text-gray-800">Handling equipment — what we plan to use and what for</p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {lq.products.map((pr, i) => {
+              const Icon = productIcon[i % productIcon.length];
+              return (
+                <div key={pr.name} className="flex flex-col rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  {pr.img ? (
+                    <button type="button" onClick={() => setZoom({ img: pr.img, caption: pr.name })} className="mb-3 block w-full rounded-lg bg-white" title="Click to enlarge">
+                      <img src={pr.img} alt={pr.name} className="h-44 w-full object-contain" loading="lazy" />
+                    </button>
+                  ) : (
+                    <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-700"><Icon className="h-5 w-5" /></span>
+                  )}
+                  <p className="font-bold text-gray-900">{pr.name}</p>
+                  <p className="mt-1 text-sm text-gray-700"><span className="font-semibold text-purple-700">For: </span>{pr.use}</p>
+                  <p className="mt-1 text-sm text-gray-600"><span className="font-semibold text-gray-700">How it helps: </span>{pr.how}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {lq.collapsible && (
+        <div className="mt-6 rounded-lg border border-purple-200 bg-purple-50 p-4">
+          <p className="text-sm font-semibold text-purple-900">Collapsible load tables — for us and the terminals that unload our trailers</p>
+          <p className="mt-1 text-sm text-purple-900">{lq.collapsible.problem}</p>
+          <div className="mt-3 grid grid-cols-3 gap-3">
+            {lq.collapsible.photos.map((ph) => <Photo key={ph.img} ph={ph} h="h-64" onZoom={setZoom} />)}
+          </div>
+          <div className="mt-3 text-sm">
+            <Bullets items={lq.collapsible.points} icon={ChevronRight} color="text-purple-600" />
+          </div>
+        </div>
+      )}
+      <p className="mb-1 mt-6 text-sm font-semibold text-gray-700">Why it matters</p>
+      <Bullets items={lq.benefits} />
+      {zoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6" onClick={() => setZoom(null)} role="dialog">
+          <figure className="max-h-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            <img src={zoom.img} alt={zoom.caption} className="max-h-[80vh] w-auto rounded-lg bg-white object-contain" />
+            <figcaption className="mt-2 flex items-center justify-between gap-4 text-sm text-white">
+              <span>{zoom.caption}</span>
+              <button type="button" onClick={() => setZoom(null)} className="rounded bg-white/20 px-3 py-1 hover:bg-white/30">Close</button>
+            </figcaption>
+          </figure>
+        </div>
+      )}
+    </Card>
+  );
+};
 
 const TerminalTab = ({ d }) => {
   const t = d.terminal;

@@ -588,6 +588,15 @@ export const DEFAULT_DATA = {
       { img: '/img/glass-leaning.jpg', caption: 'Shower door boxes leaning and toppling into each other in transit' },
     ],
     useCase: 'Example: MAAX shower doors and bases (thin, all glass) and 75" TVs currently ride standing loose in the trailer. Slot them into panel carts instead — the yellow cart rolls in and out by hand, the grey cage is picked up by forklift. Secured in transit, faster to load and unload, far less breakage.',
+    // Handling equipment we plan to use — and what for
+    products: [
+      { name: 'Collapsible load tables', img: '/img/collapsible-extended.jpg', use: 'Second tier in the trailer over short or fragile freight.', how: 'Fold flat and stack when empty; a forklift moves them. Frees dock space here and at the receiving terminal.' },
+      { name: 'ANCRA knock-down pallet decks', use: 'A second deck level for palletized freight (E-track).', how: 'Uses the top half of the trailer; freight is not stacked on freight, so less crushing.' },
+      { name: 'ANCRA divider deck-board kits', use: 'Deck boards across the trailer to lock loads in place.', how: 'Stops shifting in transit; nothing falls when the doors open.' },
+      { name: 'Yellow panel cart', use: 'MAAX glass shower doors and bases, 75-inch TVs, panels.', how: 'Freight rides upright and secured; rolls in and out of the trailer by hand.' },
+      { name: 'Grey cage / bin cart', use: 'Glass, TVs and small loose freight; staging for final mile or transfer.', how: 'Lifted in and out by forklift: one move instead of many hand-carries.' },
+      { name: 'Panel trucks & reconfigurable racks', use: 'Windows, doors, panels and car parts — long, flat, awkward freight.', how: 'Options: Sawtrax, Rack and Shelf, Grainger vertical panel truck (1,800 lb), Uline carpeted panel truck (30×60).' },
+    ],
     collapsible: {
       photos: [
         { img: '/img/collapsible-extended.jpg', caption: 'Extended — second tier in the trailer' },
