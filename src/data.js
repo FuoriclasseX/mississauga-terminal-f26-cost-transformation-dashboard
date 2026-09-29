@@ -313,30 +313,45 @@ export const DEFAULT_DATA = {
   },
 
   // --------------------------------------------------------------------------
-  // ACCESSORIALS — Accessorial unit volume report (month-reactive)
+  // ACCESSORIALS — Accessorial report, D&R Commerce Mississauga, ON
+  // Responsible party Driver / Terminal / Auto-billed · Mar 30 – Sep 29 2026
+  // target = report "Monthly Dollar Target" ($ per unit) · Sep = to Sep 29
   // --------------------------------------------------------------------------
   accessorials: {
-    monthly: [
-      { label: 'Private residence delivery', units: 18400 },
-      { label: 'Tailgate delivery', units: 6174 },
-      { label: 'Appointment delivery', units: 5468 },
-      { label: 'Appointment pick-up', units: 807 },
-      { label: 'Tailgate pick-up', units: 630 },
-      { label: 'Private residence pick-up', units: 578 },
-      { label: 'Inside delivery', units: 315 },
-      { label: 'Storage', units: 279 },
-      { label: 'Limited access delivery', units: 90 },
-      { label: 'Tradeshow delivery', units: 82 },
-      { label: 'Inside pick-up', units: 64 },
-      { label: 'Detention w/ power at delivery', units: 17 },
-      { label: 'Limited access pick-up', units: 14 },
-      { label: 'Tradeshow pick-up', units: 3 },
+    period: 'Apr – Sep 2026 · Sep to the 29th',
+    months: [
+      { m: 'Apr', usd: 329060, units: 41891 },
+      { m: 'May', usd: 283452, units: 42620 },
+      { m: 'Jun', usd: 254927, units: 46561 },
+      { m: 'Jul', usd: 266881, units: 45213 },
+      { m: 'Aug', usd: 253490, units: 38154 },
+      { m: 'Sep*', usd: 238339, units: 35052 },
     ],
-    weekly: [
-      { label: 'Jul 13', k: 8.0 }, { label: 'Jul 20', k: 7.9 }, { label: 'Jul 27', k: 7.2 },
-      { label: 'Aug 3', k: 6.3 }, { label: 'Aug 10', k: 7.6 }, { label: 'Aug 17', k: 7.1 },
-      { label: 'Aug 24', k: 8.1 }, { label: 'Aug 31', k: 7.7 }, { label: 'Sep 7', k: 6.7 },
-      { label: 'Sep 14', k: 7.5 }, { label: 'Sep 21', k: 6.6 }, { label: 'Sep 28*', k: 2.8 },
+    f27ToDate: { usd: 758710, units: 118419, label: 'Jul 1 – Sep 29' },
+    // Sep 2026 by code, sorted by F27-to-date $ (Jul–Sep)
+    codes: [
+      { code: 'TLGDL', label: 'Tailgate delivery', units: 5775, usd: 89072, avg: 15.42, target: 16.15, f27: 304286 },
+      { code: 'PRESDL', label: 'Private residence delivery', units: 17659, usd: 81174, avg: 4.60, target: 4.76, f27: 261470 },
+      { code: 'APPTDL', label: 'Appointment delivery', units: 5245, usd: 22204, avg: 4.23, target: 3.97, f27: 68752 },
+      { code: 'APPTPU', label: 'Appointment pick-up', units: 762, usd: 11935, avg: 15.66, target: 14.51, f27: 36955 },
+      { code: 'TLGPU', label: 'Tailgate pick-up', units: 628, usd: 8911, avg: 14.19, target: 13.98, f27: 23303 },
+      { code: 'STORAG', label: 'Storage', units: 269, usd: 7648, avg: 28.43, target: 31.65, f27: 15649 },
+      { code: 'PRESPU', label: 'Private residence pick-up', units: 560, usd: 4263, avg: 7.61, target: 7.23, f27: 13105 },
+      { code: 'REDELY', label: 'Redelivery', units: 97, usd: 2400, avg: 24.75, target: null, f27: 10972 },
+      { code: 'TRDSDL', label: 'Tradeshow delivery', units: 77, usd: 5748, avg: 74.65, target: 87.79, f27: 7387 },
+      { code: 'AFHRDL', label: 'After-hours delivery', units: 3130, usd: 2250, avg: 0.72, target: null, f27: 7045 },
+      { code: 'INSDDL', label: 'Inside delivery', units: 292, usd: 1873, avg: 6.42, target: 5.82, f27: 6450 },
+      { code: 'DRREWEIGH', label: 'D&R reweigh', units: 380, usd: 252, avg: 0.66, target: null, f27: 1318 },
+      { code: 'DETPDL', label: 'Detention w/ power at delivery', units: 14, usd: 0, avg: 0, target: 14.08, f27: 812 },
+      { code: 'INSDPU', label: 'Inside pick-up', units: 63, usd: 141, avg: 2.23, target: 3.47, f27: 540 },
+      { code: 'LTDADL', label: 'Limited access delivery', units: 84, usd: 335, avg: 3.99, target: 2.40, f27: 405 },
+      { code: 'LTDAPU', label: 'Limited access pick-up', units: 14, usd: 133, avg: 9.46, target: 7.39, f27: 260 },
+    ],
+    gapBelowTarget: 9230,   // Sep: Σ (target − avg) × units on codes below target
+    actions: [
+      'Tailgate and residential delivery are 74% of accessorial $ — both a little under the $/unit target in Sep. Check every one is rated before invoicing.',
+      'Detention: 14 units in Sep billed $0 — driver times recorded so it can be billed.',
+      'After-hours delivery: 3,130 units at $0.72 each — review which ones should bill.',
     ],
   },
 
@@ -419,7 +434,7 @@ export const DEFAULT_DATA = {
     { name: 'Freight-handling equipment', category: 'Claims & damage', annual: null, ytd: null, status: 'Planned',
       description: 'Panel carts / racks for glass shower doors, TVs, panels, car parts.', detail: 'Damaged FB 1.61% (7-day); claims $13.4K in August.' },
     { name: 'Accessorial capture', category: 'Revenue protection', annual: null, ytd: null, status: 'In progress',
-      description: 'Every accessorial coded before invoicing (residential, tailgate, appointment…).', detail: '32,921 accessorial units this month.' },
+      description: 'Every accessorial coded before invoicing (residential, tailgate, appointment…).', detail: 'Sep: 7 of 13 codes at or above the $/unit target; tailgate and residential delivery slightly under.', captured: 758710, capturedLabel: 'accessorial revenue F27 to date (Jul 1 – Sep 29)' },
     { name: 'Toyota baseload footage capture', category: 'Revenue / load factor', annual: null, ytd: null, status: 'In progress',
       description: 'Capture Toyota (Bowmanville) linear footage correctly.', detail: 'Moncton lane (Toyota baseload): 20.5% of bills have no cube recorded vs 3.0% on other lanes.' },
   ],

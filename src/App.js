@@ -405,7 +405,8 @@ const KpiGoalsCard = ({ rows }) => {
           const data = FY_MONTHS.map((m, i) => ({ m, v: r.months[i] ?? null }));
           const vals = [...r.months, r.goal, r.stretch];
           const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.25 || 1;
-          const good = r.rating && r.rating !== 'Needs improvement';
+          const good = r.better === 'down' ? r.current <= r.goal : r.current >= r.goal;
+          const above = r.current >= r.goal;
           return (
             <div key={r.kpi} className="flex flex-col rounded-xl border border-gray-200 p-4">
               <div className="flex items-start justify-between gap-2">
@@ -416,7 +417,7 @@ const KpiGoalsCard = ({ rows }) => {
                 <Chip tone={RATING_TONE[r.rating]}>{r.rating}</Chip>
               </div>
               <div className="mt-2 flex items-baseline gap-3">
-                <p className={`text-4xl font-bold ${good ? 'text-gray-900' : 'text-red-600'}`}>{num(r.current, r.current % 1 ? (r.current < 10 ? 2 : 1) : 0)}{r.unit}</p>
+                <p className={`text-4xl font-bold ${good ? 'text-emerald-600' : 'text-red-600'}`}><span className="mr-1 text-2xl">{above ? '▲' : '▼'}</span>{num(r.current, r.current % 1 ? (r.current < 10 ? 2 : 1) : 0)}{r.unit}</p>
                 <p className="text-sm text-gray-500">{r.currentLabel} · goal {r.better === 'down' ? '≤' : '≥'} {r.goal}{r.unit}</p>
               </div>
               <ResponsiveContainer width="100%" height={110}>
@@ -453,7 +454,7 @@ const OverviewTab = ({ d, x, go }) => {
   const agenda = [
     { id: 'safety', icon: Shield, title: 'Safety', text: 'TRIR, initiative tracker, peak ramp-up onboarding and driver proposals.' },
     { id: 'service', icon: Clock, title: 'Service', text: 'On-time service, service failures by code, missed pickups and scanning.' },
-    { id: 'initiatives', icon: TrendingUp, title: 'F27 Savings Outlook', text: 'Monthly and yearly roll-up to Jun 2027 — agency contract labour, next levers.' },
+    { id: 'initiatives', icon: TrendingUp, title: 'F27 Savings Outlook', text: 'Monthly and yearly roll-up to Jun 2027 — agency contract labour, next levers, accessorial revenue.' },
     { id: 'sca', icon: DollarSign, title: 'SCA', text: 'Hours vs allowance, SCA dock cost per PRO, shifts and agency mix.' },
     { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, load factor, CICO and P&D measures.' },
     { id: 'terminal', icon: Wrench, title: 'Equipment & Terminal', text: 'Load quality and securement equipment; new building before the end of 2026.' },
@@ -1138,38 +1139,81 @@ const MissedPuCard = ({ m }) => {
 
 // --- Extra SCA / productivity cards -----------------------------------------
 const AccessorialCard = ({ a }) => {
-  const total = sum(a.monthly.map((r) => r.units));
-  const top = a.monthly.slice(0, 6);
-  const top3 = sum(a.monthly.slice(0, 3).map((r) => r.units));
+  const targeted = a.codes.filter((c) => isNum(c.target));
+  const up = targeted.filter((c) => c.avg >= c.target).length;
+  const sep = a.months[a.months.length - 1];
   return (
-    <Card title="Accessorial capture" subtitle="Accessorial unit volume report · current month" icon={DollarSign} className="mb-8">
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div>
-          <p className="mb-2 text-sm font-semibold text-gray-700">Top accessorials this month · ≈{num(total)} units total</p>
-          <div className="space-y-2">
-            {top.map((r) => (
-              <div key={r.label}>
-                <div className="flex justify-between text-xs text-gray-600"><span>{r.label}</span><span className="font-semibold">{num(r.units)}</span></div>
-                <div className="h-2 overflow-hidden rounded-full bg-gray-100"><div className="h-full bg-orange-500" style={{ width: `${(r.units / top[0].units) * 100}%` }} /></div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 text-sm text-gray-600">Private-residence, tailgate and appointment deliveries are ≈{pct((top3 / total) * 100, 0)} of volume — every one coded is revenue captured.</p>
+    <Card title="Revenue protection — accessorial capture" subtitle={`Accessorial report · Mississauga · ${a.period}`} icon={DollarSign} className="mt-8">
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-xl bg-gray-50 p-4">
+          <p className="text-sm font-medium text-gray-500">F27 to date ({a.f27ToDate.label})</p>
+          <p className="text-3xl font-bold text-gray-900">{kMoney(a.f27ToDate.usd)}</p>
+          <p className="text-xs text-gray-500">{num(a.f27ToDate.units)} accessorial units</p>
         </div>
-        <div>
-          <p className="mb-2 text-sm font-semibold text-gray-700">Weekly accessorial units (thousands) · 12 weeks</p>
+        <div className="rounded-xl bg-gray-50 p-4">
+          <p className="text-sm font-medium text-gray-500">September (to the 29th)</p>
+          <p className="text-3xl font-bold text-gray-900">{kMoney(sep.usd)}</p>
+          <p className="text-xs text-gray-500">{num(sep.units)} units</p>
+        </div>
+        <div className="rounded-xl bg-gray-50 p-4">
+          <p className="text-sm font-medium text-gray-500">September vs $/unit target</p>
+          <p className="text-3xl font-bold"><span className="text-emerald-600">▲ {up}</span> <span className="text-gray-300">/</span> <span className="text-red-600">▼ {targeted.length - up}</span></p>
+          <p className="text-xs text-gray-500">codes at/above · below target — ≈{kMoney(a.gapBelowTarget)} under target in Sep</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <div className="lg:col-span-2">
+          <p className="mb-2 text-sm font-semibold text-gray-700">Accessorial revenue by month ($K)</p>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={a.weekly} margin={{ top: 20, right: 5, bottom: 0, left: -20 }}>
+            <BarChart data={a.months.map((r) => ({ ...r, k: Math.round(r.usd / 1000) }))} margin={{ top: 20, right: 5, bottom: 0, left: -20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+              <XAxis dataKey="m" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${v}K units`} />
-              <Bar dataKey="k" name="Units (K)" fill="#ea580c" radius={[3, 3, 0, 0]}>
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => `$${v}K`} />
+              <Bar dataKey="k" name="$K" fill="#ea580c" radius={[3, 3, 0, 0]}>
                 <LabelList dataKey="k" position="top" style={{ fontSize: 10, fill: '#374151' }} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          <Source>*Week of Sep 28 is partial.</Source>
+          <Source>*September to the 29th. F27 = Jul onward.</Source>
+          <div className="mt-4"><Bullets items={a.actions} icon={ChevronRight} color="text-orange-600" /></div>
+        </div>
+        <div className="overflow-x-auto lg:col-span-3">
+          <p className="mb-2 text-sm font-semibold text-gray-700">September by accessorial — avg $ per unit vs target</p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wider text-gray-500">
+                <th className="py-2 pr-2">Accessorial</th>
+                <th className="py-2 pr-2 text-right">Units</th>
+                <th className="py-2 pr-2 text-right">Billed</th>
+                <th className="py-2 pr-2 text-right">Avg $/unit</th>
+                <th className="py-2 pr-2 text-right">Target</th>
+                <th className="py-2 text-center">vs target</th>
+              </tr>
+            </thead>
+            <tbody>
+              {a.codes.map((c) => {
+                const has = isNum(c.target);
+                const ok = has && c.avg >= c.target;
+                return (
+                  <tr key={c.code} className="border-b border-gray-100">
+                    <td className="py-1.5 pr-2 text-gray-800">{c.label}</td>
+                    <td className="py-1.5 pr-2 text-right text-gray-600">{num(c.units)}</td>
+                    <td className="py-1.5 pr-2 text-right text-gray-600">{money(c.usd)}</td>
+                    <td className={`py-1.5 pr-2 text-right font-semibold ${has ? (ok ? 'text-emerald-700' : 'text-red-600') : 'text-gray-700'}`}>${c.avg.toFixed(2)}</td>
+                    <td className="py-1.5 pr-2 text-right text-gray-500">{has ? `$${c.target.toFixed(2)}` : '—'}</td>
+                    <td className="py-1.5 text-center">
+                      {has ? (ok
+                        ? <span className="inline-block rounded bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">▲ {pct(((c.avg - c.target) / c.target) * 100, 0)}</span>
+                        : <span className="inline-block rounded bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">▼ {pct(((c.target - c.avg) / c.target) * 100, 0)}</span>)
+                        : <span className="text-xs text-gray-400">no target</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <Source>Sorted by F27-to-date revenue. Target = report's monthly dollar target per unit.</Source>
         </div>
       </div>
     </Card>
@@ -2145,6 +2189,11 @@ const InitiativesTab = ({ d, x, onSet }) => {
                         <p className="text-3xl font-bold text-gray-800">{money(i.annual)}</p>
                         <p className="mt-1 text-sm text-gray-600">per year{identified > 0 ? ` · ${pct((i.annual / identified) * 100, 0)} of identified` : ''}</p>
                       </>
+                    ) : isNum(i.captured) ? (
+                      <>
+                        <p className="text-3xl font-bold text-gray-800">{kMoney(i.captured)}</p>
+                        <p className="mt-1 max-w-[12rem] text-sm text-gray-600">{i.capturedLabel}</p>
+                      </>
                     ) : (
                       <p className="text-lg font-semibold text-gray-500">$ to be sized</p>
                     )}
@@ -2170,6 +2219,7 @@ const InitiativesTab = ({ d, x, onSet }) => {
           </div>
         </div>
       </Card>
+      <AccessorialCard a={d.accessorials} />
     </>
   );
 };
@@ -2416,7 +2466,6 @@ const ScaTab = ({ d, x }) => {
 
       <LabourCard l={d.labour} />
       <ShiftCard s={s} />
-      <AccessorialCard a={d.accessorials} />
       <ReweighCard r={d.reweighs} />
 
     </>
