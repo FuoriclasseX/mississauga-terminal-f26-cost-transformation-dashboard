@@ -263,6 +263,32 @@ export const DEFAULT_DATA = {
   },
 
   // --------------------------------------------------------------------------
+  // FORK TRUCK REWEIGHS — Fork Truck Reweighs dashboard, Mississauga (origin)
+  // Target = 100% of reweigh target (80–100 amber, <80 red)
+  // --------------------------------------------------------------------------
+  reweighs: {
+    target: 100,
+    last7Pct: 123.28,
+    totalReweighs: 44283,
+    totalTarget: 52000,          // dashboard shows 52K
+    overallPct: 85.16,           // all selected scan dates, incl. March ramp-up
+    byMonth: [
+      { label: 'Mar', fy: 'F26', pct: 75.4 },
+      { label: 'Apr', fy: 'F26', pct: 144.3 },
+      { label: 'May', fy: 'F26', pct: 111.5 },
+      { label: 'Jun', fy: 'F26', pct: 124.1 },
+      { label: 'Jul', fy: 'F27', pct: 143.9 },
+      { label: 'Aug', fy: 'F27', pct: 126.4 },
+      { label: 'Sep', fy: 'F27', pct: 131.8 },
+    ],
+    recentWeeks: [
+      { label: 'Wk 38', pct: 128.2 },
+      { label: 'Wk 39', pct: 130.8 },
+      { label: 'Wk 40*', pct: 93.2 },
+    ],
+  },
+
+  // --------------------------------------------------------------------------
   // LABOUR DISTRIBUTION — company employees, Terminal Labor Distribution Report
   // Q1 = Jul–Sep. F27 Q1 is to date.
   // --------------------------------------------------------------------------

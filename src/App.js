@@ -941,6 +941,59 @@ const PdCard = ({ p }) => (
   </Card>
 );
 
+const ReweighCard = ({ r }) => {
+  const tone = (v) => (!isNum(v) || !isNum(r.target) ? 'gray' : v >= r.target ? 'green' : v >= r.target * 0.8 ? 'amber' : 'red');
+  const fill = { green: '#059669', amber: '#f59e0b', red: '#dc2626', gray: '#9ca3af' };
+  const f27 = r.byMonth.filter((m) => m.fy === 'F27');
+  return (
+    <Card title="Revenue protection — fork truck reweighs" subtitle="Fork Truck Reweighs dashboard · Mississauga (origin)" icon={Gauge} className="mb-8">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-xl bg-green-50 p-4">
+          <p className="text-sm font-medium text-gray-600">Last 7 days · vs target</p>
+          <p className="text-4xl font-bold text-green-700"><V v={r.last7Pct} fmt={(v) => pct(v, 2)} /></p>
+        </div>
+        {f27.map((m) => (
+          <div key={m.label} className="rounded-xl bg-green-50 p-4">
+            <p className="text-sm font-medium text-gray-600">{m.label} (F27) · vs target</p>
+            <p className="text-4xl font-bold text-green-700"><V v={m.pct} fmt={(v) => pct(v)} /></p>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <p className="mb-2 text-sm font-semibold text-gray-700">Reweighs to target % by month</p>
+          <ResponsiveContainer width="100%" height={230}>
+            <BarChart data={r.byMonth} margin={{ top: 20, right: 10, bottom: 0, left: -15 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => pct(v)} />
+              {isNum(r.target) && <ReferenceLine y={r.target} stroke="#059669" strokeDasharray="5 5" />}
+              <Bar dataKey="pct" name="Reweighs to target %" radius={[4, 4, 0, 0]}>
+                {r.byMonth.map((m) => <Cell key={m.label} fill={fill[tone(m.pct)]} fillOpacity={m.fy === 'F27' ? 1 : 0.55} />)}
+                <LabelList dataKey="pct" position="top" formatter={(v) => `${v}%`} style={{ fontSize: 11, fill: '#374151' }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <p className="mt-1 text-xs text-gray-500">Solid bars = F27 (Jul–Sep). Target line = 100%.</p>
+        </div>
+        <div className="space-y-3 text-sm">
+          <div className="rounded-lg bg-gray-50 p-4">
+            <p className="text-xs text-gray-500">All selected dates</p>
+            <p className="text-2xl font-bold text-gray-900">{isNum(r.totalReweighs) ? num(r.totalReweighs) : '—'} <span className="text-sm font-normal text-gray-500">of {isNum(r.totalTarget) ? `${num(r.totalTarget / 1000)}K` : '—'} target</span></p>
+            <p className="text-amber-700"><V v={r.overallPct} fmt={(v) => `${pct(v, 2)} — includes the March ramp-up`} small /></p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {r.recentWeeks.map((w) => <Chip key={w.label} tone={tone(w.pct)}>{w.label}: {pct(w.pct)}</Chip>)}
+          </div>
+          <p className="text-gray-600">Every month since April is above target. Reweighs correct under-declared weights, protecting revenue on every bill.</p>
+          <Source>*Wk 40 is partial.</Source>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 // --- SCA & Savings ---------------------------------------------------------
 const ScaTab = ({ d, x }) => {
   const s = d.sca;
@@ -1176,6 +1229,7 @@ const ScaTab = ({ d, x }) => {
 
       <LabourCard l={d.labour} />
       <AccessorialCard a={d.accessorials} />
+      <ReweighCard r={d.reweighs} />
 
       <Card
         title="F27 savings plan"
