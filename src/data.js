@@ -48,7 +48,7 @@ export const DEFAULT_DATA = {
       { name: 'N95 masks made readily available on the dock during roofing', status: 'Completed', note: 'Supply in place' },
       { name: 'New shunt pre-trip checklist rolled out — used every shift', status: 'Completed', note: 'Now part of every shift' },
       { name: 'Freight-handling equipment — panel trucks and reconfigurable racks for windows, panels and car parts', status: 'Planned', note: 'Options: Sawtrax, Rack and Shelf, Grainger vertical panel truck (1,800 lb), Uline carpeted panel truck 30×60 — safer handling, better load quality, fewer damages' },
-      { name: 'Load securement & decking — ANCRA knock-down pallet decks and security divider deck-board kits', status: 'Planned', note: 'Second tier over short/fragile freight, loads locked in place — no freight falling when doors open (see Productivity)' },
+      { name: 'Load securement & decking — ANCRA knock-down pallet decks and security divider deck-board kits', status: 'Planned', note: 'Second tier over short/fragile freight, loads locked in place — no freight falling when doors open (see Equipment & Terminal)' },
       { name: 'Driver safety reps — top safety-score drivers join the monthly safety meeting and speak for drivers', status: 'Planned', note: 'Proposal to take to Safety' },
       { name: 'Manager & supervisor route ride-alongs — quarterly quota, ramping up', status: 'Planned', note: 'Proposal to take to Safety' },
       { name: 'Peak-period onboarding with the Safety team — SWP review, check-ins and spot checks for new temp (agency) staff', status: 'Planned', note: 'Supported by Safety — November and spring/summer e-commerce peaks' },
@@ -93,7 +93,6 @@ export const DEFAULT_DATA = {
     f27Plans: [
       'Roofing work over the dock: work areas identified and barricaded so no one enters zones under overhead work (falling-debris risk).',
       'N95 masks made readily available on the dock during roofing work to minimize exposure to airborne debris.',
-      'Safety moments after every incident so the whole team hears the specific learning.',
     ],
   },
 
@@ -123,7 +122,7 @@ export const DEFAULT_DATA = {
     weeks: [
       { label: 'Week 39', note: 'full week', fbs: 3458, onTime: 2957, unadjLates: 501, adjLates: 180, unadjPct: 85.51, adjPct: 94.79,
         codes: { AS: 435, TF: 22, UNCODED: 14, IN: 9, OTHER: 9, DL: 8, OT: 3, LH: 1 } },
-      { label: 'Week 40', note: 'Sun–Mon', fbs: 840, onTime: 750, unadjLates: 90, adjLates: 29, unadjPct: 89.29, adjPct: 96.55,
+      { label: 'Week 40', note: 'Sep 27–28, partial', fbs: 840, onTime: 750, unadjLates: 90, adjLates: 29, unadjPct: 89.29, adjPct: 96.55,
         codes: { AS: 82, UNCODED: 3, OT: 2, IN: 2, OTHER: 1 } },
     ],
     inclPartners: { pct: 87.6, lateFbs: 12650, onTimeFbs: 89340 },   // dashboard shows 12.65K / 89.34K
@@ -180,12 +179,12 @@ export const DEFAULT_DATA = {
       { label: 'OPS – false positive', count: 1530, pct: 44.74 },
       { label: 'Customer issue',       count: 1190, pct: 34.73 },
       { label: 'OPS issue',            count: 510,  pct: 14.93 },
-      { label: 'Cancelled / CCC / made', count: null, pct: 5.6 },
+      { label: 'Cancelled / other', count: null, pct: 5.6 },
     ],
     topReasons: [
       { label: 'Already serviced',   count: 1390, pct: 40.73 },
       { label: 'Not ready',          count: 620,  pct: 18.24 },
-      { label: 'Cust issue – log…',  count: 290,  pct: 8.46 },
+      { label: 'Customer issue – other',  count: 290,  pct: 8.46 },
       { label: 'Appointment',        count: 170,  pct: 4.83 },
     ],
     falsePositiveCount: 1530,   // OPS – false positive
@@ -198,8 +197,6 @@ export const DEFAULT_DATA = {
       { label: '26 Sep', pct: 0.33 },
     ],
     notes: [
-      'Sep 7 spike (85.7%) = Labour Day — very low volume.',
-      'Wk 39 is partial.',
     ],
     actions: [
       'Close-out discipline: every serviced pickup scanned/closed before the driver leaves — removes "already serviced" false positives.',
@@ -387,7 +384,7 @@ export const DEFAULT_DATA = {
     ],
     ratios: [
       { label: 'Stops / trip', v: 9.92, d: 2 }, { label: 'Stops / hour', v: 2.09, d: 2 }, { label: 'Hours / trip', v: 4.75, d: 2 },
-      { label: 'Bills / trip', v: 13.83, d: 2 }, { label: 'Weight / trip', v: 7017 }, { label: 'Weight / stop', v: 707 },
+      { label: 'Bills / trip', v: 13.83, d: 2 }, { label: 'Lbs / trip', v: 7017 }, { label: 'Lbs / stop', v: 707 },
       { label: 'Miles / hour', v: 35.13, d: 2 }, { label: 'Miles / stop', v: 16.82, d: 2 },
     ],
   },
@@ -401,17 +398,17 @@ export const DEFAULT_DATA = {
     { name: 'Dispatcher role eliminated', category: 'Admin labour', annual: 61000, ytd: null, status: 'Confirmed',
       description: 'Dispatch centralized — dispatcher seat no longer needed.', detail: 'Permanent role reduction; full-year value once effective.' },
     { name: 'Agency labour mix', category: 'Dock labour', annual: null, ytd: null, status: 'In progress',
-      description: 'Keep agency share of dock hours down (61.4% Sept MTD vs 70.5% in F26 Sept).', detail: 'Agency hours 4,443 → 2,457 Sept vs F26; agency cost $130K → $75K.' },
+      description: 'Keep agency share of dock hours down (61.4% Sept MTD vs 70.5% in F26 Sept).', detail: 'Agency hours 4,443 → 2,457 and agency cost $130K → $75K (F26 Sept full month vs F27 Sept MTD).' },
     { name: 'Hours under SCA allowance', category: 'Dock labour', annual: null, ytd: null, status: 'In progress',
       description: 'Run at or below the monthly SCA hour target (Sept 5,122 hrs).', detail: 'Sept MTD 391 hrs under allowance ≈ $13.1K; on pace for 139% of the hour-reduction target.' },
     { name: 'Load securement & decking', category: 'Linehaul / load factor', annual: null, ytd: null, status: 'Planned',
-      description: 'ANCRA decks, divider deck-board kits and collapsible load tables — use the top half of the trailer; tables fold and stack when empty.', detail: 'LF score 36.4% F27 — every point of load factor reduces linehaul cost per lb.' },
+      description: 'ANCRA decks, divider deck-board kits and collapsible load tables — use the top half of the trailer; tables fold and stack when empty.', detail: 'Load factor score 36.4% in F27 — every point of load factor reduces linehaul cost per lb.' },
     { name: 'Freight-handling equipment', category: 'Claims & damage', annual: null, ytd: null, status: 'Planned',
       description: 'Panel carts / racks for glass shower doors, TVs, panels, car parts.', detail: 'Damaged FB 1.61% (7-day); claims $13.4K in August.' },
     { name: 'Accessorial capture', category: 'Revenue protection', annual: null, ytd: null, status: 'In progress',
-      description: 'Every accessorial coded before invoicing (residential, tailgate, appointment…).', detail: '≈32,921 accessorial units this month.' },
+      description: 'Every accessorial coded before invoicing (residential, tailgate, appointment…).', detail: '32,921 accessorial units this month.' },
     { name: 'Toyota baseload footage capture', category: 'Revenue / load factor', annual: null, ytd: null, status: 'In progress',
-      description: 'Capture Toyota (Bowmanville) linear footage correctly.', detail: 'Moncton lane: 20.5% of bills with no cube vs 3.0% elsewhere.' },
+      description: 'Capture Toyota (Bowmanville) linear footage correctly.', detail: 'Moncton lane (Toyota baseload): 20.5% of bills have no cube recorded vs 3.0% on other lanes.' },
   ],
 
   // --------------------------------------------------------------------------

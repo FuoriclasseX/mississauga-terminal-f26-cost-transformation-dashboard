@@ -118,9 +118,9 @@ const derive = (d) => {
   const paceReduction = allNum(s.f26Hours, paceHours) ? s.f26Hours - Math.round(paceHours) : null;
   const paceVsReductionTarget = allNum(paceReduction, s.hourReductionTarget) && s.hourReductionTarget > 0 ? (paceReduction / s.hourReductionTarget) * 100 : null;
 
-  const initAnnual = sum(d.initiatives.map((i) => i.annual));
+  const initAnnual = sum(d.initiatives.filter((i) => i.status === 'Confirmed').map((i) => i.annual));
   const initYtd = sum(d.initiatives.map((i) => i.ytd));
-  const initHasAnnual = d.initiatives.some((i) => isNum(i.annual));
+  const initHasAnnual = d.initiatives.some((i) => i.status === 'Confirmed' && isNum(i.annual));
   const initHasYtd = d.initiatives.some((i) => isNum(i.ytd));
 
   const p27 = d.productivity.f27;
@@ -343,7 +343,7 @@ const StatusSelect = ({ value, stages, onChange }) => {
   return (
     <select
       value={st.k}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => { onChange(e.target.value); e.target.blur(); }}
       className="cursor-pointer rounded-full border-2 bg-white px-3 py-1 text-xs font-semibold focus:outline-none"
       style={{ borderColor: st.color, color: st.color }}
       title="Change status"
@@ -403,7 +403,7 @@ const OverviewTab = ({ d, x, go }) => {
     { id: 'sca', icon: DollarSign, title: 'SCA', text: 'Hours vs allowance, SCA dock cost per PRO, shifts and agency mix.' },
     { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, load factor, CICO and P&D measures.' },
     { id: 'terminal', icon: Wrench, title: 'Equipment & Terminal', text: 'Load quality and securement equipment; new building before the end of 2026.' },
-    { id: 'spend', icon: BarChart3, title: 'Backup — Cost & Volume', text: 'Terminal P&L Jul 2025 → Aug 2026 against PROs and weight.' },
+    { id: 'spend', icon: BarChart3, title: 'Backup — Cost & Volume, F26 Recap, Q&A', text: 'Terminal P&L Jul 2025 → Aug 2026 against PROs and weight; F26 plan; likely questions.' },
   ];
   return (
     <>
@@ -419,7 +419,7 @@ const OverviewTab = ({ d, x, go }) => {
           <span className="font-bold text-green-400">{x.cpuVsLy ? `down ${pct(Math.abs(x.cpuVsLy.pct))} vs F26` : 'down vs F26'}</span>, units per hour are{' '}
           <span className="font-bold text-green-400">{x.uphVsLy ? `up ${pct(x.uphVsLy.pct)}` : 'up'}</span>, and overtime is only{' '}
           <span className="font-bold text-yellow-300">{isNum(p27.otHours) ? `${num(p27.otHours)} hours` : 'minimal'}</span>. Looking ahead: if current rates hold, F27 spend on the tracked lines comes in{' '}
-          <span className="font-bold text-yellow-300">≈{kMoney(outlookTotal(d) + sum(d.initiatives.map((i) => i.annual)))} below F26</span> (≈{kMoney((outlookTotal(d) + sum(d.initiatives.map((i) => i.annual))) / 12)} a month), including the confirmed $61K dispatcher saving. Next: closing the PPH gap and sizing the load-quality levers.
+          <span className="font-bold text-yellow-300">≈{kMoney(outlookTotal(d) + (x.initAnnual || 0))} below F26</span> (≈{kMoney((outlookTotal(d) + (x.initAnnual || 0)) / 12)} a month, estimate), including the confirmed $61K dispatcher saving. Next: closing the PPH gap and sizing the load-quality levers.
         </p>
         <div className="mt-6 max-w-xl">
           <div className="mb-1 flex justify-between text-sm opacity-80">
@@ -442,7 +442,7 @@ const OverviewTab = ({ d, x, go }) => {
           tone="green"
           label="Safety · TRIR F27 YTD"
           value={<V v={d.safety.trirF27Ytd} fmt={(v) => num(v, 2)} />}
-          sub={<>F26 <V v={d.safety.trirF26} fmt={(v) => num(v, 2)} small /> · 12-mo avg <V v={d.safety.trir12mmAvg} fmt={(v) => num(v, 2)} small /></>}
+          sub={<>F26 <V v={d.safety.trirF26} fmt={(v) => num(v, 2)} small /> · {isNum(x.daysSinceRecordable) ? num(x.daysSinceRecordable) : '—'} days since last recordable</>}
         />
         <Kpi
           icon={Clock}
@@ -477,21 +477,21 @@ const OverviewTab = ({ d, x, go }) => {
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
-        <Card title="Where the F27 savings are showing up" icon={Award} className="lg:col-span-3">
+        <Card title="Confirmed saving and September run-rate indicators" icon={Award} className="lg:col-span-3">
           <div className="space-y-3">
             {[
               {
-                show: isNum(d.initiatives[0] && d.initiatives[0].annual),
+                show: isNum(d.initiatives[0] && d.initiatives[0].annual) && d.initiatives[0].status === 'Confirmed',
                 icon: Users,
                 title: `${d.initiatives[0] && isNum(d.initiatives[0].annual) ? money(d.initiatives[0].annual) : ''}/yr confirmed — ${d.initiatives[0] ? d.initiatives[0].name.split(' — ')[0].toLowerCase() : ''}`,
-                text: 'Dispatch is now centralized, so the dispatcher seat is no longer needed. More initiatives in development.',
+                text: 'Dispatcher role being eliminated — dispatch is centralized, so the seat is no longer needed. More initiatives in development.',
               },
               {
                 show: isNum(x.hoursUnder),
                 icon: Clock,
                 title: `${isNum(x.hoursUnder) ? num(x.hoursUnder) : ''} dock hours under the SCA allowance`,
                 text: isNum(x.wdPctUsed)
-                  ? `${num(d.sca.f27Hours)} hrs used vs ${num(d.sca.wdAllowable)} allowed (${pct(x.wdPctUsed)}) — ≈${kMoney(x.hoursUnderValue || 0)} at ${money(p27.hourlyRate, 2)}/hr. On pace for ${isNum(x.paceVsReductionTarget) ? pct(x.paceVsReductionTarget, 0) : '—'} of the ${num(d.sca.hourReductionTarget || 0)}-hr reduction target.`
+                  ? `${num(d.sca.f27Hours)} hrs used vs ${num(d.sca.wdAllowable)} allowed (${pct(x.wdPctUsed)}) — ≈${kMoney(x.hoursUnderValue || 0)} at ${money(p27.hourlyRate, 2)}/hr. At this pace September lands ≈${num(x.paceReduction || 0)} hrs below F26 — ${isNum(x.paceVsReductionTarget) ? pct(x.paceVsReductionTarget, 0) : '—'} of the ${num(d.sca.hourReductionTarget || 0)}-hr reduction target.`
                   : '',
               },
               {
@@ -505,7 +505,7 @@ const OverviewTab = ({ d, x, go }) => {
                 icon: Users,
                 title: 'Agency labour down vs F26',
                 text: x.hoursDelta.agency && x.labour.agency
-                  ? `Agency share of dock hours ${pct((d.sca.f26AgencyHours / d.sca.f26Hours) * 100)} → ${pct((d.sca.f27AgencyHours / d.sca.f27Hours) * 100)} (F26 Sept vs F27 Sept MTD). Agency cost ${money(d.sca.f26AgencyCost)} full month → ${money(d.sca.f27AgencyCost)} MTD.`
+                  ? `Agency share of dock hours ${pct((d.sca.f26AgencyHours / d.sca.f26Hours) * 100)} → ${pct((d.sca.f27AgencyHours / d.sca.f27Hours) * 100)} (F26 Sept vs F27 Sept MTD). Agency cost ${money(d.sca.f26AgencyCost)} (F26 Sept, full month) vs ${money(d.sca.f27AgencyCost)} (F27 Sept to date).`
                   : '',
               },
               {
@@ -579,7 +579,7 @@ const SafetyTab = ({ d, x, onSet }) => {
       <PageHeader
         eyebrow="1 · Safety"
         icon={Shield}
-        title="TRIR — Total Recordable Incident Rate"
+        title="Safety — TRIR, Daily Practice & F27 Initiatives"
         subtitle="Where we are today, the processes in place, and what we are adding to improve in F27."
       />
       {isNum(s.trirF27Ytd) && s.trirF27Ytd === 0 && s.recordablesF27Ytd === 0 && (
@@ -587,7 +587,7 @@ const SafetyTab = ({ d, x, onSet }) => {
           <CheckCircle className="h-6 w-6 flex-shrink-0 text-green-600" />
           <p className="text-lg">
             <span className="font-bold">Zero recordable incidents in F27 to date (Jul–Aug)</span> — TRIR 0.00 vs {isNum(s.trirF26) ? num(s.trirF26, 2) : '—'} in F26.
-            <span className="ml-2 text-xs text-green-700">Source: Management Control Report — F27 TRIR, Aug-26.</span>
+            <span className="ml-2 text-xs text-green-700">Source: Management Control Report — F27 TRIR, Aug 2026.</span>
           </p>
         </div>
       )}
@@ -626,7 +626,7 @@ const SafetyTab = ({ d, x, onSet }) => {
             ))}
           </ul>
         </Card>
-        <Card title="Ideas to action" icon={Zap} className="lg:col-span-2">
+        <Card title="Ideas to action" icon={Zap} className="self-start lg:col-span-2">
           <Bullets items={s.ideas} icon={ChevronRight} color="text-purple-600" />
         </Card>
       </div>
@@ -655,7 +655,7 @@ const SafetyTab = ({ d, x, onSet }) => {
             <p className="text-base font-bold text-gray-800">2 · Manager & supervisor route ride-alongs</p>
             <p className="mt-1 text-sm text-gray-700">
               Managers and supervisors ride routes with drivers to see road challenges first-hand — docks, customer sites, traffic, securement. Quarterly quota starts
-              lower and builds to every driver ridden with at least once a year.
+              lower and builds to a ride-along with every driver at least once a year.
             </p>
             <table className="mt-4 w-full text-sm">
               <thead>
@@ -873,7 +873,7 @@ const ServiceTab = ({ d, x }) => {
               </div>
             )}
             <div>
-              <p className="mb-1 text-sm font-semibold text-gray-700">Last 7 days</p>
+              <p className="mb-1 text-sm font-semibold text-gray-700">Last 7 days (Sep 22–28)</p>
               <ResponsiveContainer width="100%" height={130}>
                 <BarChart data={o.last7Days} margin={{ top: 16, right: 0, bottom: 0, left: -30 }}>
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} />
@@ -904,7 +904,7 @@ const ServiceTab = ({ d, x }) => {
               return (
                 <div key={w.label} className="mb-4">
                   <p className="text-xs text-gray-600">
-                    <span className="font-semibold text-gray-800">{w.label}</span> ({w.note}) · {num(w.fbs)} FBs · adj {pct(w.adjPct, 2)} · {num(w.unadjLates)} unadj. lates − {num(w.codes.AS || 0)} AS ={' '}
+                    <span className="font-semibold text-gray-800">{w.label}</span> ({w.note}) · {num(w.fbs)} FBs · {num(w.unadjLates)} unadjusted lates − {num(w.codes.AS || 0)} AS ={' '}
                     <span className="font-semibold text-gray-800">{num(total)} service fails</span>
                   </p>
                   <div className="mt-1 space-y-1">
@@ -983,10 +983,10 @@ const ServiceTab = ({ d, x }) => {
                 <p className="text-sm font-medium text-gray-600">{m.label}</p>
                 <p className="mt-1 text-4xl font-bold text-gray-900"><V v={m.pct} fmt={(v) => pct(v, 2)} /></p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {deltaChip(m.vsLast, 'vs last period')}
+                  {deltaChip(m.vsLast, 'pts vs last period')}
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  Sep 1–28: {isNum(m.scanned) ? num(m.scanned) : '—'} of {isNum(m.total) ? num(m.total) : '—'} scan events · Fiscal YTD <V v={m.fytd} fmt={(v) => pct(v, 2)} small />
+                  Sep 1–28: {isNum(m.scanned) ? num(m.scanned) : '—'} of {isNum(m.total) ? num(m.total) : '—'} freight bills · Fiscal YTD <V v={m.fytd} fmt={(v) => pct(v, 2)} small />
                 </p>
               </div>
             );
@@ -1187,7 +1187,7 @@ const LabourCard = ({ l }) => {
         </div>
         <div className="space-y-3 text-sm lg:col-span-2">
           <div className="rounded-lg bg-green-50 p-4 text-green-900">
-            <p className="font-semibold">Company dock hours flat</p>
+            <p className="font-semibold">Company dock hours flat (Q1 to date)</p>
             <p>{num(l.f26.dockHours)} → {num(l.f27.dockHours)} hrs, while agency hours were cut (see SCA hours above). OT held at {pct(l.f27.otPct)} of hours.</p>
           </div>
           <div className="rounded-lg bg-amber-50 p-4 text-amber-900">
@@ -1233,6 +1233,7 @@ const PdCard = ({ p }) => (
         </div>
       ))}
     </div>
+    <Source>Delivery and pickup bills are counted separately and do not add up to total bills. Weight in lbs.</Source>
   </Card>
 );
 
@@ -1276,7 +1277,7 @@ const ReweighCard = ({ r }) => {
           <div className="rounded-lg bg-gray-50 p-4">
             <p className="text-xs text-gray-500">All selected dates</p>
             <p className="text-2xl font-bold text-gray-900">{isNum(r.totalReweighs) ? num(r.totalReweighs) : '—'} <span className="text-sm font-normal text-gray-500">of {isNum(r.totalTarget) ? `${num(r.totalTarget / 1000)}K` : '—'} target</span></p>
-            <p className="text-amber-700"><V v={r.overallPct} fmt={(v) => `${pct(v, 2)} — includes the March ramp-up`} small /></p>
+            <p className="text-amber-700"><V v={r.overallPct} fmt={(v) => `${pct(v, 2)} — all selected dates in the dashboard`} small /></p>
           </div>
           <div className="flex flex-wrap gap-2">
             {r.recentWeeks.map((w) => <Chip key={w.label} tone={tone(w.pct)}>{w.label}: {pct(w.pct)}</Chip>)}
@@ -1333,7 +1334,7 @@ const LoadFactorCard = ({ lf }) => {
             <button
               key={label}
               onClick={() => setExMoncton(v)}
-              className={`rounded-md px-3 py-1.5 transition-colors ${exMoncton === v ? 'bg-white text-purple-700 shadow' : 'text-gray-600 hover:text-gray-800'}`}
+              className={`whitespace-nowrap rounded-md px-3 py-1.5 transition-colors ${exMoncton === v ? 'bg-white text-purple-700 shadow' : 'text-gray-600 hover:text-gray-800'}`}
             >
               {label}
             </button>
@@ -1424,7 +1425,7 @@ const LoadFactorCard = ({ lf }) => {
         </p>
       </div>
       <div className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-        Western lanes are strong (Burnaby {pct(lf.lanes[0].lf[2])} in Sept). Windsor, Quebec City and Dartmouth run consistently light — frequency review.
+        Western lanes are strong (Burnaby {pct(lf.lanes[0].lf[2])} in Sep). Windsor, Quebec City and Dartmouth run consistently light — under frequency review.
       </div>
       <Source>LF score = share of loads over 80% full · Load % = load-weighted average. Excluding-Moncton and band figures are calculated from the report.</Source>
     </Card>
@@ -1437,6 +1438,26 @@ const s2rides = (d) => {
   const full = Math.ceil(dp.drivers / 4);
   return `${dp.rampPct.map((p) => Math.ceil(full * p)).join(' → ')} per quarter (${dp.drivers} drivers)`;
 };
+
+const QA_ORDER = [
+  'How is safety?',
+  'What is new in safety for F27?',
+  'What safety initiatives are in place — active vs completed?',
+  'What safety ideas can you action at the terminal?',
+  'How is service?',
+  'Which service failure happens most?',
+  'How are you tracking to the year-end goal?',
+  'What savings are needed to hit your goals?',
+  'What is your SCA target?',
+  'How are you tracking against target?',
+  'What is your spend rate?',
+  'How much agency labour are you using?',
+  'What are your agency to D&R ratios by shift?',
+  'What about overtime?',
+  'Why is PPH below goal?',
+  'Why are Terminal Admin hours up?',
+  'What about the building?',
+];
 
 const QaTab = ({ d, x }) => {
   const s = d.sca;
@@ -1478,10 +1499,10 @@ const QaTab = ({ d, x }) => {
     {
       q: 'How are you tracking to the year-end goal?',
       a: [
-        `F27 cost take-out target: ${f(s.f27SavingsTarget, money)}.`,
+        `F27 cost take-out target: ${f(s.f27SavingsTarget, money, 'to be confirmed with Finance')}.`,
         `Identified so far: ${f(identified, money)} per year — dispatcher role eliminated with dispatch centralized. More initiatives in development.`,
         `F27 outlook if current rates hold: ≈${kMoney(outlookTotal(d) + (identified || 0))} below F26 (≈${kMoney((outlookTotal(d) + (identified || 0)) / 12)} a month) — Admin labour, Dock labour and other P&L lines plus the dispatcher saving (estimate, not booked).`,
-        `Run-rate evidence: cost per unit ${f(x.cpu26, (v) => money(v, 2))} → ${f(x.cpu27, (v) => money(v, 2))} (≈${f(x.cpuSavings, kMoney)} avoided in September to date), hours under SCA allowance, agency share down.`,
+        `Run-rate evidence: cost per unit ${f(x.cpu26, (v) => money(v, 2))} → ${f(x.cpu27, (v) => money(v, 2))} (≈${f(x.cpuSavings, kMoney)} avoided in September to date, cost-per-unit basis), hours under SCA allowance, agency share down.`,
       ],
       calc: true,
     },
@@ -1490,10 +1511,10 @@ const QaTab = ({ d, x }) => {
       a: [
         `SCA hours: September requires ${f(s.hourReductionTarget, num)} fewer dock hours than F26 September (≈${f(reductionValue, kMoney)} at ${f(p.f27.hourlyRate, (v) => money(v, 2))}/hr). We are on pace for ≈${f(x.paceReduction, num)} — ${f(x.paceVsReductionTarget, (v) => pct(v, 0))} of the requirement.`,
         `Cost per PRO: stay under ${f(s.costPerProTarget, (v) => money(v, 2))} — currently ${f(x.cppUnder, (v) => money(v, 2))} under on average per PRO.`,
-        'Labour by %: hold Admin labour 13.5% and Dock labour 4.2% below F26; every extra 1% ≈ $18.6K/yr Admin, ≈ $31.7K/yr Dock.',
+        'Labour: hold the Jul–Aug rates (Admin agency −25%, Dock labour −4%); every extra 1% off F26 labour spend ≈ $50K/yr.',
         isNum(s.f27SavingsTarget)
           ? `F27 take-out: ${money(s.f27SavingsTarget)} target − ${f(identified, money, '$0')} identified = ${money(gap)} still to find ≈ ${money(gapPerMonth)} per month over the ${monthsLeft} months left (Oct–Jun).`
-          : `F27 take-out target: TBC — gap = target − ${f(identified, money, '$0')} identified, spread over the ${monthsLeft} months left (Oct–Jun). Enter the target in Edit data and this line calculates itself.`,
+          : `F27 take-out target: to be confirmed — ${f(identified, money, '$0')} confirmed so far; the remaining gap will be spread over the ${monthsLeft} months left (Oct–Jun).`,
       ],
       calc: true,
     },
@@ -1541,7 +1562,7 @@ const QaTab = ({ d, x }) => {
       q: 'How is service?',
       a: [
         `Adjusted on-time ${latest ? pct(latest.incl) : '—'} in ${latest ? latest.label : '—'} (${latest ? pct(latest.excl) : '—'} excluding partner carriers) vs ${f(o.target, (v) => pct(v, 0))} target; last 7 days ${f(o.last7Pct, (v) => pct(v, 2))}.`,
-        `Missed pickups ${f(d.missedPu.missedPct, (v) => pct(v, 2))} overall, ${f(d.missedPu.last7Pct, (v) => pct(v, 2))} last 7 days — 45% are OPS false positives (close-out fix).`,
+        `Missed pickups ${f(d.missedPu.missedPct, (v) => pct(v, 2))} overall, ${f(d.missedPu.last7Pct, (v) => pct(v, 2))} last 7 days — 45% are false positives from the OPS close-out process (fix in progress).`,
       ],
     },
     {
@@ -1582,7 +1603,7 @@ const QaTab = ({ d, x }) => {
       q: 'What is new in safety for F27?',
       a: [
         'Driver safety reps: top safety-score drivers join the monthly safety meeting and speak for drivers — peers carry more weight than policy, being chosen creates ownership, and drivers raise concerns with a peer they would not raise with a manager.',
-        `Manager & supervisor route ride-alongs: quarterly quota ramping ${s2rides(d)} — every driver ridden with at least once a year. Proposal to take to Safety.`,
+        `Manager & supervisor route ride-alongs: quarterly quota ramping ${s2rides(d)} — building to a ride-along with every driver at least once a year. Proposal to take to Safety.`,
         'Peak-period onboarding, supported by the Safety team: for the November and spring/summer e-commerce peaks (10–20% more temp staff on every shift), Safety helps phase in new workers — SWPs, lifting technique, truck and trailer pull safety, forklift safety and seat belts, right to refuse unsafe work — with check-ins and spot checks on top of operations checks.',
         `“${d.safety.quote}”`,
       ],
@@ -1592,6 +1613,7 @@ const QaTab = ({ d, x }) => {
       a: [d.terminal.relocation, d.terminal.relocationNote].filter(Boolean),
     },
   ];
+  qa.sort((a, b) => (QA_ORDER.indexOf(a.q) + 1 || 99) - (QA_ORDER.indexOf(b.q) + 1 || 99));
 
   return (
     <>
@@ -1717,7 +1739,7 @@ const SpendTab = ({ d }) => {
             {firstF27 && <ReferenceArea yAxisId="k" x1={firstF27} x2={lastLabel} fill="#7c3aed" fillOpacity={0.07} label={{ value: 'F27', position: 'insideTop', fill: '#7c3aed', fontSize: 12, fontWeight: 700 }} />}
             <XAxis dataKey="label" tick={{ fontSize: 11 }} />
             <YAxis yAxisId="k" tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}K`} />
-            <YAxis yAxisId="p" orientation="right" domain={[20, 50]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+            <YAxis yAxisId="p" orientation="right" domain={[20, 50]} ticks={[20, 30, 40, 50]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
             <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => (n === 'Total cost per PRO (P&L)' ? money(v, 2) : `$${num(v, 1)}K`)} />
             <Legend />
             <Bar yAxisId="k" dataKey="adminK" name="Terminal Admin" stackId="c" fill={DEPT_COLORS.admin} />
@@ -1952,8 +1974,8 @@ const SavingsOutlook = ({ d, identified }) => {
             <thead>
               <tr className="border-b-2 border-gray-200 text-left text-gray-500">
                 <th className="py-2 pr-2 font-semibold">Line</th>
-                <th className="py-2 pr-2 text-right font-semibold">Jul–Aug rate</th>
-                <th className="py-2 pr-2 text-right font-semibold">/ month</th>
+                <th className="whitespace-nowrap py-2 pr-2 text-right font-semibold">Jul–Aug %</th>
+                <th className="whitespace-nowrap py-2 pr-2 text-right font-semibold">Per month</th>
                 <th className="py-2 text-right font-semibold">F27 year</th>
               </tr>
             </thead>
@@ -1980,7 +2002,7 @@ const SavingsOutlook = ({ d, identified }) => {
               ))}
               {isNum(identified) && identified > 0 && (
                 <tr className="border-b border-gray-200 bg-green-50 font-semibold">
-                  <td className="py-1.5 pr-2" colSpan={2}>Dispatcher role (confirmed)</td>
+                  <td className="py-1.5 pr-2" colSpan={2}>Dispatcher role (confirmed, annual value)</td>
                   <td className="py-1.5 pr-2 text-right text-green-700">{sv(identified / 12)}</td>
                   <td className="py-1.5 text-right text-green-700">{sv(identified)}</td>
                 </tr>
@@ -1997,15 +2019,15 @@ const SavingsOutlook = ({ d, identified }) => {
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-lg bg-purple-50 p-4 text-sm text-purple-900">
-          <p className="font-semibold">How we reach the goal — labour by %</p>
-          <p className="mt-1">Hold Admin labour at {pct(Math.abs((byGroup[0].ytd / sum(byGroup[0].ls.map((l) => sum(l.f26.slice(0, n))))) * 100))} below F26 and Dock at {pct(Math.abs((byGroup[1].ytd / sum(byGroup[1].ls.map((l) => sum(l.f26.slice(0, n))))) * 100))} below. Every extra 1% is ≈{kMoney(onePct('Admin labour'))}/yr in Admin and ≈{kMoney(onePct('Dock labour'))}/yr on the Dock.</p>
+          <p className="font-semibold">How we hold and grow the outlook — labour</p>
+          <p className="mt-1">Hold the Jul–Aug rates: Admin agency {pct(Math.abs(lines[0].rate * 100), 0)} lower, Dock labour {pct(Math.abs((byGroup[1].ytd / sum(byGroup[1].ls.map((l) => sum(l.f26.slice(0, n))))) * 100), 0)} lower. Every extra 1% off F26 labour spend ≈ {kMoney(labourOnePct)}/yr (Admin {kMoney(onePct('Admin labour'))}, Dock {kMoney(onePct('Dock labour'))}).</p>
         </div>
         <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-semibold">{isNum(gap) ? (gap > 0 ? `Gap to target: ${money(gap)}` : 'Outlook covers the target') : 'Gap to target: needs the F27 target'}</p>
           <p className="mt-1">
             {isNum(gap) && gap > 0
               ? `≈${money(gap / 9)} a month over Oct–Jun, or ≈${pct((gap / labourOnePct), 1)} more off total labour.`
-              : isNum(gap) ? `Outlook ${money(grand)} vs target ${money(target)}.` : 'Enter the F27 take-out target and the gap, monthly need and extra labour % calculate here.'}
+              : isNum(gap) ? `Outlook ${money(grand)} vs target ${money(target)}.` : 'The gap and monthly need will show here once the F27 take-out target is set.'}
           </p>
         </div>
         <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
@@ -2023,13 +2045,14 @@ const SavingsOutlook = ({ d, identified }) => {
 const InitiativesTab = ({ d, x, onSet }) => {
   const items = d.initiatives.filter((i) => i.name);
   const target = d.sca.f27SavingsTarget;
-  const identified = sum(items.map((i) => i.annual));
+  const confirmedItems = items.filter((i) => i.status === 'Confirmed' && isNum(i.annual));
+  const identified = sum(confirmedItems.map((i) => i.annual));
   const realized = sum(items.map((i) => i.ytd));
-  const hasIdentified = items.some((i) => isNum(i.annual));
+  const hasIdentified = confirmedItems.length > 0;
   const pctOfTarget = hasIdentified && isNum(target) && target > 0 ? (identified / target) * 100 : null;
   const gap = isNum(target) ? target - identified : null;
   const monthsLeft = 9;
-  const pieData = items.filter((i) => isNum(i.annual) && i.annual > 0).map((i) => ({ name: i.name, value: i.annual }));
+  const pieData = confirmedItems.filter((i) => i.annual > 0).map((i) => ({ name: i.name, value: i.annual }));
   const counts = Object.keys(STATUS_STYLE).map((k) => ({ k, n: items.filter((i) => i.status === k).length })).filter((c) => c.n);
 
   return (
@@ -2166,7 +2189,7 @@ const ScaTab = ({ d, x }) => {
     { period: 'F27 Sept MTD', Company: s.f27CompanyCost, Agency: s.f27AgencyCost },
   ];
   const labourReady = allNum(s.f26CompanyCost, s.f26AgencyCost, s.f27CompanyCost, s.f27AgencyCost);
-  const cppLabel = { green: 'On target', amber: 'Under target — watch', red: 'Over target', gray: '' }[x.cppTone];
+  const cppLabel = { green: 'On target', amber: 'Amber band (95–100% of target)', red: 'Over target', gray: '' }[x.cppTone];
   const periodNote = `F26 = full September 2025 · F27 = September MTD (${isNum(s.wdMtd) ? s.wdMtd : '—'} of ${isNum(s.wdMonth) ? s.wdMonth : '—'} working days)`;
 
   return (
@@ -2174,7 +2197,7 @@ const ScaTab = ({ d, x }) => {
       <PageHeader
         eyebrow="4 · SCA"
         icon={DollarSign}
-        title="SCA — Hours, Cost per PRO & F27 Take-Out"
+        title="SCA — Hours, Cost per PRO & Labour Mix"
         subtitle={`Current status against the SCA targets and progress toward the F27 cost take-out target (target TBC). Mississauga · updated for ${s.updatedFor}.`}
         right={
           isNum(x.wdPctUsed) && (
@@ -2280,7 +2303,7 @@ const ScaTab = ({ d, x }) => {
       </Card>
 
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <Card title="Dock hours — F26 vs F27" subtitle="Company vs agency hours" icon={Users}>
+        <Card title="Dock hours — F26 Sept (full) vs F27 Sept MTD" subtitle="Company vs agency hours · partial-month effect included" icon={Users}>
           {hoursReady ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={hoursData} layout="vertical" margin={{ top: 10, right: 30, bottom: 0, left: 10 }}>
@@ -2312,7 +2335,7 @@ const ScaTab = ({ d, x }) => {
           <Source>{periodNote}.</Source>
         </Card>
 
-        <Card title="Dock labour cost — F26 vs F27" subtitle="Company vs agency wages" icon={DollarSign}>
+        <Card title="Dock labour cost — F26 Sept (full) vs F27 Sept MTD" subtitle="Company vs agency wages · partial-month effect included" icon={DollarSign}>
           {labourReady ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={labourData} layout="vertical" margin={{ top: 10, right: 30, bottom: 0, left: 10 }}>
@@ -2515,11 +2538,11 @@ const ProductivityTab = ({ d, x }) => {
   ].filter((r) => isNum(r.value));
   const cicoData = c.weeks.filter((w) => isNum(w.hoursSaved));
   const compareRows = [
-    { label: 'Weight (lbs)', a: p27.weight, b: p26.weight, d: x.weightVsLy, fmt: num, good: 'up', note: 'F27 is MTD' },
-    { label: 'Units', a: p27.units, b: p26.units, d: x.unitsVsLy, fmt: num, good: 'up', note: 'F27 is MTD' },
+    { label: 'Weight (lbs)', a: p27.weight, b: p26.weight, d: x.weightVsLy, fmt: num, good: 'up', note: 'F27 Sep 1–26 vs full F26 month' },
+    { label: 'Units', a: p27.units, b: p26.units, d: x.unitsVsLy, fmt: num, good: 'up', note: 'F27 Sep 1–26 vs full F26 month' },
     { label: 'PPH (lbs / hr)', a: p27.pph, b: p26.pph, d: x.pphVsLy, fmt: num, good: 'up' },
     { label: 'Units per hour', a: p27.unitsPerHr, b: p26.unitsPerHr, d: x.uphVsLy, fmt: (v) => num(v, 2), good: 'up' },
-    { label: 'Lbs per unit', a: p27.lbsPerUnit, b: x.lbsPerUnitF26, d: allNum(p27.lbsPerUnit, x.lbsPerUnitF26) ? { abs: p27.lbsPerUnit - x.lbsPerUnitF26, pct: ((p27.lbsPerUnit - x.lbsPerUnitF26) / x.lbsPerUnitF26) * 100 } : null, fmt: num, good: 'neutral', note: 'F26 = PPH ÷ units/hr' },
+    { label: 'Lbs per unit', a: p27.lbsPerUnit, b: x.lbsPerUnitF26, d: allNum(p27.lbsPerUnit, x.lbsPerUnitF26) ? { abs: p27.lbsPerUnit - x.lbsPerUnitF26, pct: ((p27.lbsPerUnit - x.lbsPerUnitF26) / x.lbsPerUnitF26) * 100 } : null, fmt: num, good: 'neutral' },
     { label: 'Cost per hour', a: p27.hourlyRate, b: p26.hourlyRate, d: x.rateVsLy, fmt: (v) => money(v, 2), good: 'down' },
     { label: 'Dock labour cost per CWT', a: p27.cwt, b: p26.cwt, d: x.cwtVsLy, fmt: (v) => money(v, 4), good: 'down' },
     { label: 'Dock labour cost per unit', a: x.cpu27, b: x.cpu26, d: x.cpuVsLy, fmt: (v) => money(v, 2), good: 'down' },
@@ -2633,7 +2656,7 @@ const ProductivityTab = ({ d, x }) => {
 
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <LoadFactorCard lf={lf} />
-        <Card title="CICO" subtitle="Clock-in / clock-out — SCA team review" icon={Clock} right={<Chip tone="green">{c.status}</Chip>}>
+        <Card title="CICO" subtitle="Clock-in / clock-out — SCA team review" icon={Clock} className="self-start" right={<Chip tone="green">{c.status}</Chip>}>
           <Bullets items={c.drivers} />
           {cicoData.length > 0 && (
             <ResponsiveContainer width="100%" height={200}>
@@ -2651,7 +2674,7 @@ const ProductivityTab = ({ d, x }) => {
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
-        <Card title="Cost & volume — F27 vs F26" subtitle={P.period} icon={Activity} className="lg:col-span-3">
+        <Card title="Dock labour — F27 vs F26" subtitle={P.period} icon={Activity} className="lg:col-span-3">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -2735,7 +2758,7 @@ const LoadQualityCard = ({ d }) => (
                 <div className="relative">
                   <img src={ph.img} alt={ph.caption} className="h-44 w-full object-cover" loading="lazy" />
                   <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold text-white ${ph.ok ? 'bg-green-600' : 'bg-red-600'}`}>
-                    {ph.ok ? 'Target' : 'Fix'}
+                    {ph.ok ? 'Good practice' : 'Needs fixing'}
                   </span>
                 </div>
                 <figcaption className="p-2 text-xs text-gray-600">{ph.caption}</figcaption>
@@ -2818,16 +2841,17 @@ const F26Tab = ({ d }) => {
         title="F26 Recap → F27"
         subtitle="The F26 plan set in July 2025 (Jul 1, 2025 – Jun 30, 2026) — the baseline we are building on in F27."
       />
-      <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
+      <div className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Archived — the F26 plan as presented in July 2025. Figures and wording are as of that date; F26 actual spend is on the Cost & Volume tab.</div>
+      <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi icon={Calendar} tone="gray" label="F25 actual cost" value={<V v={f.f25ActualCost} fmt={money} />} />
-        <Kpi icon={Target} tone="purple" label="F26 target cost" value={<V v={f.f26TargetCost} fmt={money} />} sub={<>F26 actual <V v={f.f26ActualCost} fmt={money} small /></>} />
+        <Kpi icon={Target} tone="purple" label="F26 target cost" value={<V v={f.f26TargetCost} fmt={money} />} sub="Plan set July 2025" />
         <Kpi icon={TrendingDown} tone="blue" label="Required reduction" value={<V v={f.requiredReduction} fmt={money} />} />
         <Kpi
           icon={CheckCircle}
           tone="green"
           label="F26 savings identified"
           value={<V v={f.identifiedSavings} fmt={money} />}
-          sub={<>Actual <V v={f.f26ActualSavings} fmt={money} small /></>}
+          sub="Plan set July 2025"
           footer={allNum(f.identifiedSavings, f.requiredReduction) && <Chip tone="green">{pct((f.identifiedSavings / f.requiredReduction) * 100, 0)} of target</Chip>}
         />
       </div>
@@ -2981,6 +3005,7 @@ const App = () => {
   // Arrow keys move between sections while presenting
   useEffect(() => {
     const onKey = (e) => {
+      if (e.key === 'Escape' && editing) { setEditing(false); return; }
       if (editing || /input|textarea|select/i.test(e.target.tagName)) return;
       if (e.key === 'ArrowRight' || e.key === 'PageDown') step(1);
       if (e.key === 'ArrowLeft' || e.key === 'PageUp') step(-1);
@@ -3028,7 +3053,7 @@ const App = () => {
               <button
                 key={t.id}
                 onClick={() => go(t.id)}
-                className={`flex flex-shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                className={`flex flex-shrink-0 items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-medium transition-colors ${
                   tab === t.id ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                 }`}
               >
