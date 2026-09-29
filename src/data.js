@@ -277,11 +277,15 @@ export const DEFAULT_DATA = {
     cdTargetPerDay: 171,
     cdAllowable: 4439,           // calendar-day allowance MTD (report: 90.1% used)
     // Workforce mix per shift — headcount (dock + admin), agency vs D&R
+    // Example day — Wed Sep 9, 2026. Hours: shift report (target vs actual, dock).
+    // Headcount: timesheet, people who worked that day; not Day & Ross = agency; dock/admin by department (admin incl. dispatch).
+    workforceDate: 'Wed Sep 9, 2026',
     workforce: [
-      { shift: 'Days', drDock: null, agencyDock: null, drAdmin: null, agencyAdmin: null },
-      { shift: 'Afternoons', drDock: null, agencyDock: null, drAdmin: null, agencyAdmin: null },
-      { shift: 'Midnights', drDock: null, agencyDock: null, drAdmin: null, agencyAdmin: null },
+      { shift: 'AM (Inbound)', target: 40, actual: 42.63, drDock: 2, agencyDock: 6, drAdmin: 0, agencyAdmin: 2 },
+      { shift: 'Day', target: 64, actual: 62.67, drDock: 5, agencyDock: 7, drAdmin: 0, agencyAdmin: 13 },
+      { shift: 'PM (Outbound)', target: 96, actual: 95.03, drDock: 4, agencyDock: 9, drAdmin: 1, agencyAdmin: 7 },
     ],
+    driverLoaders: { target: 8, actual: 7 },
     f27SavingsTarget: null,     // F27 cost take-out target ($)
     actions: [
       'Weekly SCA review meetings — hours vs allowance and cost per PRO tracked every week.',
@@ -730,18 +734,18 @@ export const EDIT_SECTIONS = [
       f('sca.f26TotalCost', 'F26 total cost ($)'),
       f('sca.f26CompanyCost', 'F26 company cost ($)'),
       f('sca.f26AgencyCost', 'F26 agency cost ($)'),
-      f('sca.workforce.0.drDock', 'Days — D&R dock'),
-      f('sca.workforce.0.agencyDock', 'Days — agency dock'),
-      f('sca.workforce.0.drAdmin', 'Days — D&R admin'),
-      f('sca.workforce.0.agencyAdmin', 'Days — agency admin'),
-      f('sca.workforce.1.drDock', 'Afternoons — D&R dock'),
-      f('sca.workforce.1.agencyDock', 'Afternoons — agency dock'),
-      f('sca.workforce.1.drAdmin', 'Afternoons — D&R admin'),
-      f('sca.workforce.1.agencyAdmin', 'Afternoons — agency admin'),
-      f('sca.workforce.2.drDock', 'Midnights — D&R dock'),
-      f('sca.workforce.2.agencyDock', 'Midnights — agency dock'),
-      f('sca.workforce.2.drAdmin', 'Midnights — D&R admin'),
-      f('sca.workforce.2.agencyAdmin', 'Midnights — agency admin'),
+      f('sca.workforce.0.drDock', 'AM — D&R dock'),
+      f('sca.workforce.0.agencyDock', 'AM — agency dock'),
+      f('sca.workforce.0.drAdmin', 'AM — D&R admin'),
+      f('sca.workforce.0.agencyAdmin', 'AM — agency admin'),
+      f('sca.workforce.1.drDock', 'Day — D&R dock'),
+      f('sca.workforce.1.agencyDock', 'Day — agency dock'),
+      f('sca.workforce.1.drAdmin', 'Day — D&R admin'),
+      f('sca.workforce.1.agencyAdmin', 'Day — agency admin'),
+      f('sca.workforce.2.drDock', 'PM — D&R dock'),
+      f('sca.workforce.2.agencyDock', 'PM — agency dock'),
+      f('sca.workforce.2.drAdmin', 'PM — D&R admin'),
+      f('sca.workforce.2.agencyAdmin', 'PM — agency admin'),
     ],
   },
   {

@@ -2200,48 +2200,106 @@ const ScaTab = ({ d, x }) => {
               </div>
             );
           })()}
-          {!s.workforce.some((w) => isNum(w.drDock) || isNum(w.agencyDock)) ? (
-            <p className="mt-4 text-xs text-gray-500">Per-shift headcount (dock + admin) to follow.</p>
-          ) : (
-          <>
-          <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">Per shift — headcount (dock + admin)</p>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-gray-200 text-left text-gray-500">
-                <th className="py-1 pr-2 font-semibold">Shift</th>
-                <th className="py-1 pr-2 text-right font-semibold">D&R</th>
-                <th className="py-1 pr-2 text-right font-semibold">Agency</th>
-                <th className="py-1 text-right font-semibold">Agency : D&R</th>
-              </tr>
-            </thead>
-            <tbody>
-              {s.workforce.map((w) => {
-                const dr = allNum(w.drDock) ? w.drDock + (w.drAdmin || 0) : null;
-                const ag = allNum(w.agencyDock) ? w.agencyDock + (w.agencyAdmin || 0) : null;
-                return (
-                  <tr key={w.shift} className="border-b border-gray-100">
-                    <td className="py-1.5 pr-2 font-medium text-gray-700">{w.shift}</td>
-                    <td className="py-1.5 pr-2 text-right"><V v={dr} fmt={num} small /></td>
-                    <td className="py-1.5 pr-2 text-right"><V v={ag} fmt={num} small /></td>
-                    <td className="py-1.5 text-right font-semibold">{allNum(dr, ag) && dr > 0 ? `${num(ag / dr, 2)} : 1` : '—'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          </>
-          )}
         </Card>
         <Card title="How we are taking cost out" icon={Zap}>
           <Bullets items={s.actions} icon={ChevronRight} color="text-purple-600" />
         </Card>
       </div>
 
+      <ShiftCard s={s} />
       <LabourCard l={d.labour} />
       <AccessorialCard a={d.accessorials} />
       <ReweighCard r={d.reweighs} />
 
     </>
+  );
+};
+
+const ShiftCard = ({ s }) => {
+  const w = s.workforce;
+  const dl = s.driverLoaders;
+  const tgt = sum(w.map((r) => r.target)) + (dl ? dl.target : 0);
+  const act = sum(w.map((r) => r.actual)) + (dl ? dl.actual : 0);
+  const ratio = (ag, dr) => (dr > 0 ? `${num(ag / dr, 1)} : 1` : ag > 0 ? 'all agency' : '—');
+  const tot = (k) => sum(w.map((r) => r[k]));
+  const varCell = (v) => <span className={`font-semibold ${v > 0 ? 'text-red-600' : 'text-green-700'}`}>{v > 0 ? '+' : ''}{num(v, 2)}</span>;
+  return (
+    <Card title="Shifts — hours vs budget and agency vs D&R" subtitle={`Example day · ${s.workforceDate}`} icon={Users} className="mb-8">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <div>
+          <p className="mb-2 text-sm font-semibold text-gray-700">Dock hours — budget vs actual</p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b-2 border-gray-200 text-left text-gray-500">
+                <th className="py-2 pr-2 font-semibold">Shift</th>
+                <th className="py-2 pr-2 text-right font-semibold">Budget</th>
+                <th className="py-2 pr-2 text-right font-semibold">Actual</th>
+                <th className="py-2 text-right font-semibold">Variance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {w.map((r) => (
+                <tr key={r.shift} className="border-b border-gray-100">
+                  <td className="py-2 pr-2 font-medium text-gray-800">{r.shift}</td>
+                  <td className="py-2 pr-2 text-right">{num(r.target, 1)}</td>
+                  <td className="py-2 pr-2 text-right">{num(r.actual, 2)}</td>
+                  <td className="py-2 text-right">{varCell(r.actual - r.target)}</td>
+                </tr>
+              ))}
+              {dl && (
+                <tr className="border-b border-gray-100">
+                  <td className="py-2 pr-2 font-medium text-gray-800">Driver loaders</td>
+                  <td className="py-2 pr-2 text-right">{num(dl.target, 1)}</td>
+                  <td className="py-2 pr-2 text-right">{num(dl.actual, 2)}</td>
+                  <td className="py-2 text-right">{varCell(dl.actual - dl.target)}</td>
+                </tr>
+              )}
+              <tr className="bg-gray-50 font-bold">
+                <td className="py-2 pr-2">Total dock</td>
+                <td className="py-2 pr-2 text-right">{num(tgt, 1)}</td>
+                <td className="py-2 pr-2 text-right">{num(act, 2)}</td>
+                <td className="py-2 text-right">{varCell(act - tgt)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-gray-500">Total {num(act, 2)} vs {num(tgt, 0)} budget — {num(Math.abs(act - tgt), 2)} hrs {act <= tgt ? 'under' : 'over'}.</p>
+        </div>
+        <div>
+          <p className="mb-2 text-sm font-semibold text-gray-700">Headcount and ratio — agency : D&R</p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b-2 border-gray-200 text-left text-gray-500">
+                <th className="py-2 pr-2 font-semibold">Shift</th>
+                <th className="py-2 pr-2 text-right font-semibold">Dock (Agency / D&R)</th>
+                <th className="py-2 pr-2 text-right font-semibold">Dock ratio</th>
+                <th className="py-2 pr-2 text-right font-semibold">Admin (Agency / D&R)</th>
+                <th className="py-2 text-right font-semibold">Admin ratio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {w.map((r) => (
+                <tr key={r.shift} className="border-b border-gray-100">
+                  <td className="py-2 pr-2 font-medium text-gray-800">{r.shift}</td>
+                  <td className="py-2 pr-2 text-right">{r.agencyDock} / {r.drDock}</td>
+                  <td className="py-2 pr-2 text-right font-semibold">{ratio(r.agencyDock, r.drDock)}</td>
+                  <td className="py-2 pr-2 text-right">{r.agencyAdmin} / {r.drAdmin}</td>
+                  <td className="py-2 text-right font-semibold">{ratio(r.agencyAdmin, r.drAdmin)}</td>
+                </tr>
+              ))}
+              <tr className="bg-gray-50 font-bold">
+                <td className="py-2 pr-2">Total</td>
+                <td className="py-2 pr-2 text-right">{tot('agencyDock')} / {tot('drDock')}</td>
+                <td className="py-2 pr-2 text-right">{ratio(tot('agencyDock'), tot('drDock'))}</td>
+                <td className="py-2 pr-2 text-right">{tot('agencyAdmin')} / {tot('drAdmin')}</td>
+                <td className="py-2 text-right">{ratio(tot('agencyAdmin'), tot('drAdmin'))}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-gray-500">People who worked that day. Not Day & Ross = agency. Dock / admin by department; admin includes dispatch.</p>
+        </div>
+      </div>
+      <Source>Hours: daily shift report. Headcount: weekly timesheet, {s.workforceDate}.</Source>
+    </Card>
   );
 };
 
