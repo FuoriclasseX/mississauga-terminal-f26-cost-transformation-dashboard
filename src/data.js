@@ -96,6 +96,19 @@ export const DEFAULT_DATA = {
     ],
   },
 
+  // F27 KPI goal plan (company goals) vs Mississauga — months = Jul, Aug, Sep actuals
+  kpiGoals: [
+    { kpi: 'On-time service', sub: 'incl. interliners', unit: '%', better: 'up', months: [89.3, 91.7, 93.7], current: 93.7, currentLabel: 'Sep', goal: 91, stretch: 94,
+      bands: 'Achieved 91–92% · Exceeded 92–94% · S. Exceeded >94%', rating: 'Exceeded', plan: 'On track — up every month since July. Hold 92%+ through peak.' },
+    { kpi: 'Missed pickups', sub: '% of pickups', unit: '%', better: 'down', months: [4.88, 3.66, 5.23], current: 5.23, currentLabel: 'Sep MTD', goal: 1, stretch: 0.5,
+      bands: 'Achieved 1% · Exceeded 0.6–0.9% · S. Exceeded ≤0.5%', rating: 'Needs improvement', plan: 'Gap to goal. ≈45% are OPS false positives — the close-out fix and daily PU review close most of it.' },
+    { kpi: 'Load factor — headhaul', sub: 'average load %', unit: '%', better: 'up', months: [79.6, 71.5, 72.8], current: 74.9, currentLabel: 'Jul–Sep', goal: 74, stretch: 76,
+      bands: 'Achieved 74% · Exceeded 75–76% · S. Exceeded >76%', rating: 'Achieved', plan: 'At goal for F27 so far (75.7% excl. Moncton). Sep dipped to 72.8% — Toyota footage fix and decking lift it.' },
+    { kpi: 'Damages', sub: 'claims per 1,000 FBs', bands: 'Achieved 3.5 · Exceeded 3.3–3.49 · S. Exceeded <3.3', rating: null, plan: 'Measure to confirm' },
+    { kpi: 'Reweighs', sub: 'national goal', bands: 'Achieved 4,760–5,236 · Exceeded 5,237–5,712 · S. Exceeded >5,712', rating: null, plan: 'Sep at 131.8% of the terminal target' },
+    { kpi: 'Cubing', sub: '', bands: 'Achieved 0.45–0.5% · Exceeded 0.40–0.45% · S. Exceeded <0.40%', rating: null, plan: 'Measure to confirm' },
+  ],
+
   // --------------------------------------------------------------------------
   // SERVICE — OTS (On-Time Service)
   // Percentages are calculated for you from the counts.
@@ -148,7 +161,7 @@ export const DEFAULT_DATA = {
       'Scanning compliance checked every shift.',
       'Terminal and P&D teams working together on hand-offs.',
       'End-of-shift reporting on afternoons — every late coded before shift end.',
-      'Partner-carrier (beyond interliner) lates reviewed weekly with the interline team — largely outside terminal control.',
+      'Partner-carrier (beyond interliner) lates reviewed weekly with the interline team.',
     ],
   },
 

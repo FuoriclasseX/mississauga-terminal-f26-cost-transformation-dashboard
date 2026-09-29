@@ -391,6 +391,61 @@ const StatusSummary = ({ items, stages, doneKeys }) => {
   );
 };
 
+const RATING_TONE = { 'S. Exceeded': 'green', Exceeded: 'green', Achieved: 'blue', 'Needs improvement': 'red' };
+
+const FY_MONTHS = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+
+const KpiGoalsCard = ({ rows }) => {
+  const tracked = rows.filter((r) => r.months);
+  const pending = rows.filter((r) => !r.months);
+  return (
+    <Card title="F27 KPI goals — where we are" subtitle="Months so far vs the goal line, through June 2027" icon={Target} className="mb-8">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {tracked.map((r) => {
+          const data = FY_MONTHS.map((m, i) => ({ m, v: r.months[i] ?? null }));
+          const vals = [...r.months, r.goal, r.stretch];
+          const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.25 || 1;
+          const good = r.rating && r.rating !== 'Needs improvement';
+          return (
+            <div key={r.kpi} className="flex flex-col rounded-xl border border-gray-200 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-bold text-gray-900">{r.kpi}</p>
+                  <p className="text-xs text-gray-500">{r.sub}</p>
+                </div>
+                <Chip tone={RATING_TONE[r.rating]}>{r.rating}</Chip>
+              </div>
+              <div className="mt-2 flex items-baseline gap-3">
+                <p className={`text-4xl font-bold ${good ? 'text-gray-900' : 'text-red-600'}`}>{num(r.current, r.current % 1 ? (r.current < 10 ? 2 : 1) : 0)}{r.unit}</p>
+                <p className="text-sm text-gray-500">{r.currentLabel} · goal {r.better === 'down' ? '≤' : '≥'} {r.goal}{r.unit}</p>
+              </div>
+              <ResponsiveContainer width="100%" height={110}>
+                <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -28 }}>
+                  <XAxis dataKey="m" tick={{ fontSize: 9 }} interval={0} />
+                  <YAxis domain={[Math.max(0, lo - pad), hi + pad]} tick={{ fontSize: 9 }} tickFormatter={(v) => `${Math.round(v * 10) / 10}`} />
+                  <ReferenceLine y={r.goal} stroke="#059669" strokeDasharray="4 4" label={{ value: 'Goal', position: 'insideTopRight', fontSize: 9, fill: '#059669' }} />
+                  <Line type="monotone" dataKey="v" stroke="#ea580c" strokeWidth={3} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
+                </LineChart>
+              </ResponsiveContainer>
+              <p className="mt-1 text-sm text-gray-700">{r.plan}</p>
+              <p className="mt-1 text-xs text-gray-400">{r.bands}</p>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+        {pending.map((r) => (
+          <div key={r.kpi} className="rounded-lg bg-gray-50 px-4 py-3">
+            <p className="text-sm font-semibold text-gray-800">{r.kpi} <span className="font-normal text-gray-500">{r.sub}</span></p>
+            <p className="text-xs text-gray-600">{r.plan}</p>
+            <p className="text-xs text-gray-400">{r.bands}</p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
 // --- Overview --------------------------------------------------------------
 const OverviewTab = ({ d, x, go }) => {
   const fp = fiscalProgress();
@@ -489,6 +544,8 @@ const OverviewTab = ({ d, x, go }) => {
           footer={x.uphVsLy && <Delta d={x.uphVsLy} goodWhen="up" />}
         />
       </div>
+
+      <KpiGoalsCard rows={d.kpiGoals} />
 
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
         <Card title="Where September is showing results" icon={Award} className="lg:col-span-3">
@@ -1023,7 +1080,7 @@ const MissedPuCard = ({ m }) => {
           </ResponsiveContainer>
         </div>
         <div>
-          <p className="mb-2 text-sm font-semibold text-gray-700">Last 7 days</p>
+          <p className="mb-2 text-sm font-semibold text-gray-700">Daily — Sep 22–26 (last 7-day window)</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={m.last7Days} margin={{ top: 20, right: 5, bottom: 0, left: -20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
