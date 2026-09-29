@@ -396,9 +396,9 @@ const OverviewTab = ({ d, x, go }) => {
   const fp = fiscalProgress();
   const p27 = d.productivity.f27;
   const agenda = [
-    { id: 'safety', icon: Shield, title: 'Safety', text: 'TRIR, what we do every shift, and driver-led initiatives for F27.' },
+    { id: 'safety', icon: Shield, title: 'Safety', text: 'TRIR, initiative tracker, peak ramp-up onboarding and driver proposals.' },
     { id: 'service', icon: Clock, title: 'Service', text: 'On-time service, service failures by code, missed pickups and scanning.' },
-    { id: 'initiatives', icon: TrendingUp, title: 'F27 Savings Outlook', text: 'Monthly and yearly roll-up to Jun 2027 — Admin and Dock labour by %, next levers.' },
+    { id: 'initiatives', icon: TrendingUp, title: 'F27 Savings Outlook', text: 'Monthly and yearly roll-up to Jun 2027 — agency contract labour, next levers.' },
     { id: 'sca', icon: DollarSign, title: 'SCA', text: 'Hours vs allowance, SCA dock cost per PRO, shifts and agency mix.' },
     { id: 'productivity', icon: Gauge, title: 'Productivity', text: 'PPH, units per hour, load factor, CICO and P&D measures.' },
     { id: 'terminal', icon: Wrench, title: 'Equipment & Terminal', text: 'Load quality and securement equipment; new building before the end of 2026.' },
@@ -411,15 +411,30 @@ const OverviewTab = ({ d, x, go }) => {
           {d.meta.fiscalYear} Senior Leadership Review · {d.meta.presentationDate}
         </p>
         <h2 className="mt-2 text-4xl font-bold">{d.meta.terminal} Terminal</h2>
-        <p className="mt-3 max-w-4xl text-lg leading-relaxed opacity-95">
-          <span className="font-bold text-green-400">Safety first: zero recordables in F27</span> — TRIR {isNum(d.safety.trirF27Ytd) ? num(d.safety.trirF27Ytd, 2) : '—'} vs{' '}
-          {isNum(d.safety.trirF26) ? num(d.safety.trirF26, 2) : '—'} in F26, {isNum(x.daysSinceRecordable) ? num(x.daysSinceRecordable) : '—'} days since the last recordable. September to date the dock is running at{' '}
-          <span className="font-bold text-green-400">{isNum(x.wdPctUsed) ? `${pct(x.wdPctUsed)} of its SCA hour allowance` : 'under its SCA hour allowance'}</span>, cost per unit is{' '}
-          <span className="font-bold text-green-400">{x.cpuVsLy ? `down ${pct(Math.abs(x.cpuVsLy.pct))} vs F26` : 'down vs F26'}</span>, units per hour are{' '}
-          <span className="font-bold text-green-400">{x.uphVsLy ? `up ${pct(x.uphVsLy.pct)}` : 'up'}</span>, and overtime is only{' '}
-          <span className="font-bold text-yellow-300">{isNum(p27.otHours) ? `${num(p27.otHours)} hours` : 'minimal'}</span>. Looking ahead: if current rates hold, Admin and Dock contract labour plus the dispatcher saving come in{' '}
-          <span className="font-bold text-yellow-300">≈{kMoney(outlookTotal(d) + (x.initAnnual || 0))} below F26</span> (≈{kMoney((outlookTotal(d) + (x.initAnnual || 0)) / 12)} a month, estimate), including the confirmed $61K dispatcher saving. Next: closing the PPH gap and sizing the load-quality levers.
-        </p>
+        <p className="mt-2 text-lg text-gray-300">Safe, on target, and cost coming out — with a clear plan for the rest of F27.</p>
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-lg bg-white/5 p-4 ring-1 ring-white/10">
+            <p className="text-xs font-semibold uppercase tracking-wider text-green-400">Safety first</p>
+            <p className="mt-1 text-3xl font-bold">0 recordables</p>
+            <p className="mt-1 text-sm text-gray-300">
+              TRIR {isNum(d.safety.trirF27Ytd) ? num(d.safety.trirF27Ytd, 2) : '—'} vs {isNum(d.safety.trirF26) ? num(d.safety.trirF26, 2) : '—'} in F26 · {isNum(x.daysSinceRecordable) ? num(x.daysSinceRecordable) : '—'} days since the last one
+            </p>
+          </div>
+          <div className="rounded-lg bg-white/5 p-4 ring-1 ring-white/10">
+            <p className="text-xs font-semibold uppercase tracking-wider text-orange-400">September to date</p>
+            <p className="mt-1 text-3xl font-bold">{isNum(x.wdPctUsed) ? pct(x.wdPctUsed) : '—'} <span className="text-base font-medium text-gray-300">of SCA hours</span></p>
+            <p className="mt-1 text-sm text-gray-300">
+              Cost per unit {x.cpuVsLy ? pct(x.cpuVsLy.pct) : '—'} · units per hour {x.uphVsLy ? signed(x.uphVsLy.pct, (v) => pct(v)) : '—'} · overtime {isNum(p27.otHours) ? `${num(p27.otHours)} hrs` : '—'}
+            </p>
+          </div>
+          <div className="rounded-lg bg-white/5 p-4 ring-1 ring-white/10">
+            <p className="text-xs font-semibold uppercase tracking-wider text-yellow-300">Looking ahead</p>
+            <p className="mt-1 text-3xl font-bold">≈{kMoney(outlookTotal(d))} <span className="text-base font-medium text-gray-300">F27 outlook</span></p>
+            <p className="mt-1 text-sm text-gray-300">
+              ≈{kMoney(outlookTotal(d) / 12)}/month from agency contract labour (estimate). Next: PPH gap and load quality.
+            </p>
+          </div>
+        </div>
         <div className="mt-6 max-w-xl">
           <div className="mb-1 flex justify-between text-sm opacity-80">
             <span>
@@ -476,11 +491,11 @@ const OverviewTab = ({ d, x, go }) => {
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
-        <Card title="Confirmed saving and September run-rate indicators" icon={Award} className="lg:col-span-3">
+        <Card title="Where September is showing results" icon={Award} className="lg:col-span-3">
           <div className="space-y-3">
             {[
               {
-                show: isNum(d.initiatives[0] && d.initiatives[0].annual) && d.initiatives[0].status === 'Confirmed',
+                show: false, // dispatcher detail lives on the F27 Savings tab
                 icon: Users,
                 title: `${d.initiatives[0] && isNum(d.initiatives[0].annual) ? money(d.initiatives[0].annual) : ''}/yr confirmed — ${d.initiatives[0] ? d.initiatives[0].name.split(' — ')[0].toLowerCase() : ''}`,
                 text: 'Dispatcher role being eliminated — dispatch is centralized, so the seat is no longer needed. More initiatives in development.',
