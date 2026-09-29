@@ -115,7 +115,7 @@ const derive = (d) => {
   const hoursUnderValue = allNum(hoursUnder, d.productivity.f27.hourlyRate) ? hoursUnder * d.productivity.f27.hourlyRate : null;
   // Pace: MTD hours scaled to the full month on working days
   const paceHours = allNum(s.f27Hours, s.wdMtd, s.wdMonth) && s.wdMtd > 0 ? (s.f27Hours / s.wdMtd) * s.wdMonth : null;
-  const paceReduction = allNum(s.f26Hours, paceHours) ? s.f26Hours - paceHours : null;
+  const paceReduction = allNum(s.f26Hours, paceHours) ? s.f26Hours - Math.round(paceHours) : null;
   const paceVsReductionTarget = allNum(paceReduction, s.hourReductionTarget) && s.hourReductionTarget > 0 ? (paceReduction / s.hourReductionTarget) * 100 : null;
 
   const initAnnual = sum(d.initiatives.map((i) => i.annual));
