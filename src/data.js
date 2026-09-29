@@ -49,6 +49,8 @@ export const DEFAULT_DATA = {
       { name: 'New shunt pre-trip checklist rolled out — used every shift', status: 'Completed', note: 'Now part of every shift' },
       { name: 'Freight-handling equipment — panel trucks and reconfigurable racks for windows, panels and car parts', status: 'Planned', note: 'Options: Sawtrax, Rack and Shelf, Grainger vertical panel truck (1,800 lb), Uline carpeted panel truck 30×60 — safer handling, better load quality, fewer damages' },
       { name: 'Load securement & decking — ANCRA knock-down pallet decks and security divider deck-board kits', status: 'Planned', note: 'Second tier over short/fragile freight, loads locked in place — no freight falling when doors open (see Productivity)' },
+      { name: 'Driver safety reps — top safety-score drivers join the monthly safety meeting and speak for drivers', status: 'Planned', note: 'Proposal to take to Safety' },
+      { name: 'Manager & supervisor route ride-alongs — quarterly quota, ramping up', status: 'Planned', note: 'Proposal to take to Safety' },
       { name: 'Tailgates + safety moments after every incident (e.g. pinch points)', status: 'Active' },
       { name: 'Forklift pre/post-shift inspections by every operator', status: 'Active' },
       { name: 'No loading forklifts on straight trucks', status: 'Active' },
@@ -58,6 +60,12 @@ export const DEFAULT_DATA = {
       { name: 'Monthly safety e-learning; forklift & TDG renewed before expiry', status: 'Active' },
     ],
     // Ideas to action (drafts — edit freely)
+    // Driver-led safety — proposal to take to Safety (OHS)
+    driverProgram: {
+      drivers: 50,                 // example fleet size — set to the actual Mississauga driver count
+      rampPct: [0.6, 0.8, 1],      // Q2, Q3, Q4 as a share of full pace (every driver once a year)
+      rampLabels: ['Q2 (Oct–Dec)', 'Q3 (Jan–Mar)', 'Q4 (Apr–Jun)'],
+    },
     ideas: [
       'Agency safety onboarding: site orientation, buddy for first shifts and forklift-cert check before day one — agency is ~61% of dock hours.',
       'New-building safety plan: pre-move hazard walk, dock door / leveler / lighting inspection, traffic and pedestrian plan, layout training before go-live.',

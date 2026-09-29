@@ -552,6 +552,68 @@ const SafetyTab = ({ d, x }) => {
         </Card>
       </div>
 
+      <Card title="Driver-led safety — proposal to take to Safety" subtitle="Two F27 initiatives that put drivers at the centre of the safety culture" icon={Truck} className="mb-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          <div>
+            <p className="text-base font-bold text-gray-800">1 · Driver safety reps</p>
+            <p className="mt-1 text-sm text-gray-700">
+              Drivers with a perfect or top safety score in the Mississauga fleet become driver safety reps. They join the monthly safety meeting, speak for drivers on
+              road and yard concerns, and bring ideas that help leadership fix issues sooner.
+            </p>
+            <p className="mb-2 mt-4 text-sm font-semibold text-gray-700">Why it works — the people side</p>
+            <Bullets
+              icon={ChevronRight}
+              color="text-purple-600"
+              items={[
+                'Peers carry more weight than policy — drivers copy the drivers they respect (social proof, role models).',
+                'Being chosen creates ownership — people protect the standards they help set, and act consistently with the role.',
+                'Voice without fear — drivers raise things with a peer they would not raise with a manager (psychological safety), so issues surface earlier.',
+                'Selecting on safety score rewards the behaviour we want to see — recognition reinforces it.',
+              ]}
+            />
+          </div>
+          <div>
+            <p className="text-base font-bold text-gray-800">2 · Manager & supervisor route ride-alongs</p>
+            <p className="mt-1 text-sm text-gray-700">
+              Managers and supervisors ride routes with drivers to see road challenges first-hand — docks, customer sites, traffic, securement. Quarterly quota starts
+              lower and builds to every driver ridden with at least once a year.
+            </p>
+            <table className="mt-4 w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-gray-200 text-left text-gray-500">
+                  <th className="py-2 pr-2 font-semibold">Quarter</th>
+                  <th className="py-2 pr-2 text-right font-semibold">Ride-alongs</th>
+                  <th className="py-2 text-right font-semibold">Share of drivers</th>
+                </tr>
+              </thead>
+              <tbody>
+                {s.driverProgram.rampLabels.map((q, i) => {
+                  const full = Math.ceil(s.driverProgram.drivers / 4);
+                  const n = Math.ceil(full * s.driverProgram.rampPct[i]);
+                  return (
+                    <tr key={q} className="border-b border-gray-100">
+                      <td className="py-2 pr-2 text-gray-700">{q}</td>
+                      <td className="py-2 pr-2 text-right font-semibold">{n}</td>
+                      <td className="py-2 text-right text-gray-600">≈1 in {Math.round(s.driverProgram.drivers / n)}</td>
+                    </tr>
+                  );
+                })}
+                <tr className="bg-gray-50 font-semibold">
+                  <td className="py-2 pr-2">F28 onward</td>
+                  <td className="py-2 pr-2 text-right">{Math.ceil(s.driverProgram.drivers / 4)} / quarter</td>
+                  <td className="py-2 text-right">every driver yearly</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="mt-2 text-xs text-gray-500">
+              Example based on {s.driverProgram.drivers} drivers — full pace = drivers ÷ 4 per quarter, split across managers and supervisors. Start with new drivers and
+              lower safety scores; findings go to the monthly safety meeting.
+            </p>
+          </div>
+        </div>
+        <Source>Proposal — to be agreed with Safety (OHS) before launch.</Source>
+      </Card>
+
       <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card title="What we do every shift" icon={ClipboardCheck}>
           <Bullets items={s.practices} />
