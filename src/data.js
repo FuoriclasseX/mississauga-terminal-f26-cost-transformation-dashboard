@@ -270,6 +270,13 @@ export const DEFAULT_DATA = {
            dockHours: 5205.4, dockRegCost: 131452.77, dockOtCost: 2203.88, adminHours: 446.35, adminRegCost: 9490.76 },
     f27: { hours: 6100, totalPaid: 155300, regularCost: 152300, otHours: 62.3, otPaid: 2400, headCount: 17, otPct: 1.0,
            dockHours: 5207.42, dockRegCost: 133939.99, dockOtCost: 2386.86, adminHours: 908.55, adminRegCost: 18400.58 },
+    // Terminal Admin cost, Q1 (fiscal weeks 1–13), summed from the weekly cost report
+    adminQ1CostByYear: [
+      { fy: 'F24', cost: 21535 },
+      { fy: 'F25', cost: 22665 },
+      { fy: 'F26', cost: 9193 },
+      { fy: 'F27', cost: 18428 },
+    ],
   },
 
   // --------------------------------------------------------------------------

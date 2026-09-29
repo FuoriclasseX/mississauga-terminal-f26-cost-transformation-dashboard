@@ -897,7 +897,22 @@ const LabourCard = ({ l }) => {
           </div>
           <div className="rounded-lg bg-amber-50 p-4 text-amber-900">
             <p className="font-semibold">Terminal Admin hours up</p>
-            <p>{num(l.f26.adminHours)} → {num(l.f27.adminHours)} hrs ({money(l.f26.adminRegCost)} → {money(l.f27.adminRegCost)}). Be ready to explain the staffing change.</p>
+            <p>{num(l.f26.adminHours)} → {num(l.f27.adminHours)} hrs ({money(l.f26.adminRegCost)} → {money(l.f27.adminRegCost)}). Doubled vs F26, but still below F24 and F25 — F26 was the unusually low year.</p>
+          </div>
+          <div>
+            <p className="mb-1 text-sm font-semibold text-gray-700">Terminal Admin cost — Q1 by fiscal year</p>
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={l.adminQ1CostByYear} margin={{ top: 18, right: 0, bottom: 0, left: -20 }}>
+                <XAxis dataKey="fy" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v / 1000}K`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(v)} />
+                <Bar dataKey="cost" name="Admin cost" radius={[3, 3, 0, 0]}>
+                  {l.adminQ1CostByYear.map((r) => <Cell key={r.fy} fill={r.fy === 'F27' ? '#7c3aed' : '#9ca3af'} />)}
+                  <LabelList dataKey="cost" position="top" formatter={(v) => `$${(v / 1000).toFixed(1)}K`} style={{ fontSize: 10, fill: '#374151' }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <Source>Summed from the weekly cost report, fiscal weeks 1–13.</Source>
           </div>
         </div>
       </div>
