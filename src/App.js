@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  PieChart, Pie, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine, ReferenceArea, Cell, LabelList
 } from 'recharts';
 import {
@@ -311,6 +311,7 @@ const TABS = [
   { id: 'service', label: 'Service', icon: Clock },
   { id: 'sca', label: 'SCA & Savings', icon: DollarSign },
   { id: 'productivity', label: 'Productivity', icon: Gauge },
+  { id: 'initiatives', label: 'F27 Initiatives', icon: Target },
   { id: 'terminal', label: 'Terminal', icon: Wrench },
   { id: 'f26', label: 'F26 Recap', icon: Calendar },
   { id: 'qa', label: 'Q&A', icon: ClipboardCheck },
@@ -1373,6 +1374,126 @@ const QaTab = ({ d, x }) => {
   );
 };
 
+// --- F27 Initiatives — tracked like the F26 cost transformation page ----------
+const STATUS_STYLE = {
+  Confirmed: { card: 'border-green-200 bg-gradient-to-r from-green-50 to-green-100', chip: 'green', color: '#059669' },
+  'In progress': { card: 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100', chip: 'blue', color: '#2563eb' },
+  Planned: { card: 'border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100', chip: 'amber', color: '#d97706' },
+  Opportunity: { card: 'border-gray-200 bg-gray-50', chip: 'gray', color: '#6b7280' },
+};
+const PIE_COLORS = ['#7c3aed', '#06b6d4', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#6366f1'];
+
+const InitiativesTab = ({ d, x }) => {
+  const items = d.initiatives.filter((i) => i.name);
+  const target = d.sca.f27SavingsTarget;
+  const identified = sum(items.map((i) => i.annual));
+  const realized = sum(items.map((i) => i.ytd));
+  const hasIdentified = items.some((i) => isNum(i.annual));
+  const pctOfTarget = hasIdentified && isNum(target) && target > 0 ? (identified / target) * 100 : null;
+  const gap = isNum(target) ? target - identified : null;
+  const monthsLeft = 9;
+  const pieData = items.filter((i) => isNum(i.annual) && i.annual > 0).map((i) => ({ name: i.name, value: i.annual }));
+  const counts = Object.keys(STATUS_STYLE).map((k) => ({ k, n: items.filter((i) => i.status === k).length })).filter((c) => c.n);
+
+  return (
+    <>
+      <div className="mb-8 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 p-8 text-white shadow-xl">
+        <p className="text-sm font-semibold uppercase tracking-wider text-purple-200">F27 Cost Reduction Strategy</p>
+        <h2 className="mt-1 text-3xl font-bold">F27 Savings Initiatives</h2>
+        <p className="mt-2 text-lg opacity-95">
+          {hasIdentified ? <><span className="font-bold text-yellow-300">{money(identified)}</span> identified per year so far</> : 'Initiatives identified'}
+          {isNum(target) ? <> against a <span className="font-bold">{money(target)}</span> take-out target ({pct(pctOfTarget, 0)}).</> : '. F27 take-out target: TBC.'}
+          {' '}{items.length} initiatives tracked — {counts.map((c) => `${c.n} ${c.k.toLowerCase()}`).join(' · ')}.
+        </p>
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <Kpi icon={Target} tone="purple" label="F27 take-out target" value={<V v={target} fmt={money} />} sub="Enter in Edit data" />
+        <Kpi icon={CheckCircle} tone="green" label="Identified (annual)" value={hasIdentified ? money(identified) : <Tbc />} footer={isNum(pctOfTarget) && <Chip tone={pctOfTarget >= 100 ? 'green' : 'amber'}>{pct(pctOfTarget, 0)} of target</Chip>} />
+        <Kpi icon={TrendingDown} tone="amber" label="Still to identify" value={<V v={gap} fmt={money} />} sub={isNum(gap) ? `≈${money(gap / monthsLeft)} per month over ${monthsLeft} months (Oct–Jun)` : 'Needs the take-out target'} />
+        <Kpi icon={Activity} tone="blue" label="Realized YTD" value={items.some((i) => isNum(i.ytd)) ? money(realized) : <Tbc />} sub="Enter per initiative in Edit data" />
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <Card title="Savings breakdown" subtitle="Initiatives with an annual $ value" icon={BarChart3} className="lg:col-span-2">
+          {pieData.length ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
+                  {pieData.map((e, i) => <Cell key={e.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                </Pie>
+                <Tooltip formatter={(v) => money(v)} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart height={260} label="Add annual $ values to initiatives" />
+          )}
+          <p className="mt-2 text-xs text-gray-500">Initiatives without a $ value yet show TBC below — add amounts in Edit data as they firm up.</p>
+        </Card>
+        <Card title="Realized in September — evidence" subtitle="Already visible in the SCA and productivity reports" icon={Award} className="lg:col-span-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-lg bg-green-50 p-4">
+              <p className="text-xs text-gray-600">Hours under SCA allowance</p>
+              <p className="text-2xl font-bold text-green-700">{isNum(x.hoursUnder) ? `${num(x.hoursUnder)} hrs` : <Tbc small />}</p>
+              <p className="text-xs text-gray-600">{isNum(x.hoursUnderValue) ? `≈${money(x.hoursUnderValue)} MTD` : ''}</p>
+            </div>
+            <div className="rounded-lg bg-green-50 p-4">
+              <p className="text-xs text-gray-600">Cost per unit vs F26</p>
+              <p className="text-2xl font-bold text-green-700">{x.cpuVsLy ? pct(x.cpuVsLy.pct) : <Tbc small />}</p>
+              <p className="text-xs text-gray-600">{isNum(x.cpuSavings) ? `≈${money(x.cpuSavings)} avoided MTD` : ''}</p>
+            </div>
+            <div className="rounded-lg bg-green-50 p-4">
+              <p className="text-xs text-gray-600">Agency cost vs F26 Sept</p>
+              <p className="text-2xl font-bold text-green-700">{x.labour.agency ? signed(x.labour.agency.abs, money) : <Tbc small />}</p>
+              <p className="text-xs text-gray-600">{x.labour.agency ? `${pct(x.labour.agency.pct)} (F27 MTD vs full F26 month)` : ''}</p>
+            </div>
+          </div>
+          <Source>Calculated from the SCA hours, cost-per-PRO and productivity reports (September MTD to Sep 26). Evidence of run-rate — not yet booked as initiative savings.</Source>
+        </Card>
+      </div>
+
+      <Card title="Cost reduction initiatives" subtitle="Status, value and share of identified savings" icon={Target}>
+        <div className="space-y-4">
+          {items.map((i) => {
+            const st = STATUS_STYLE[i.status] || STATUS_STYLE.Opportunity;
+            return (
+              <div key={i.name} className={`rounded-xl border-2 p-6 transition-all hover:shadow-lg ${st.card}`}>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{i.category}</p>
+                    <h3 className="mb-1 text-lg font-bold text-gray-800">{i.name}</h3>
+                    <p className="mb-2 font-medium text-gray-700">{i.description}</p>
+                    <p className="text-sm text-gray-600">{i.detail}</p>
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    <p className="text-3xl font-bold text-gray-800"><V v={i.annual} fmt={money} /></p>
+                    <p className="mt-1 text-sm text-gray-600">{isNum(i.annual) && identified > 0 ? `${pct((i.annual / identified) * 100)} of identified` : 'per year'}</p>
+                    <p className="mt-1 text-xs text-gray-500">Realized YTD <V v={i.ytd} fmt={money} small /></p>
+                    <span className="mt-3 inline-block"><Chip tone={st.chip}>{i.status}</Chip></span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-8 rounded-xl bg-gradient-to-r from-gray-800 to-gray-900 p-6 text-white">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-lg font-semibold opacity-90">Total F27 identified</p>
+              <p className="mt-1 text-sm opacity-70">{isNum(target) ? `Target ${money(target)}` : 'Target TBC'}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-4xl font-bold">{hasIdentified ? money(identified) : 'TBC'}</p>
+              {isNum(pctOfTarget) && <p className="mt-1 text-sm opacity-90">{pct(pctOfTarget, 0)} of target</p>}
+            </div>
+          </div>
+        </div>
+      </Card>
+    </>
+  );
+};
+
 // --- SCA & Savings ---------------------------------------------------------
 const ScaTab = ({ d, x }) => {
   const s = d.sca;
@@ -2260,6 +2381,7 @@ const App = () => {
         {tab === 'service' && <ServiceTab d={data} x={x} />}
         {tab === 'sca' && <ScaTab d={data} x={x} />}
         {tab === 'productivity' && <ProductivityTab d={data} x={x} />}
+        {tab === 'initiatives' && <InitiativesTab d={data} x={x} />}
         {tab === 'terminal' && <TerminalTab d={data} x={x} />}
         {tab === 'f26' && <F26Tab d={data} />}
         {tab === 'qa' && <QaTab d={data} x={x} />}

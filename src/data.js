@@ -379,9 +379,22 @@ export const DEFAULT_DATA = {
   // F27 SAVINGS PLAN — initiatives ($ per year). Edit names/amounts freely.
   // annual = F27 full-year plan, ytd = realized Jul 1 – today
   // --------------------------------------------------------------------------
+  // status: 'Confirmed' | 'In progress' | 'Planned' | 'Opportunity'
   initiatives: [
-    { name: 'Dispatcher role eliminated — dispatch centralized', annual: 61000, ytd: null, status: 'Confirmed' },
-    { name: 'Additional initiatives in development', annual: null, ytd: null, status: 'In development' },
+    { name: 'Dispatcher role eliminated', category: 'Admin labour', annual: 61000, ytd: null, status: 'Confirmed',
+      description: 'Dispatch centralized — dispatcher seat no longer needed.', detail: 'Permanent role reduction; full-year value once effective.' },
+    { name: 'Agency labour mix', category: 'Dock labour', annual: null, ytd: null, status: 'In progress',
+      description: 'Hold agency at or below 61% of dock hours (70.5% in F26 Sept).', detail: 'Agency hours 4,443 → 2,457 Sept vs F26; agency cost $130K → $75K.' },
+    { name: 'Hours under SCA allowance', category: 'Dock labour', annual: null, ytd: null, status: 'In progress',
+      description: 'Run at or below the monthly SCA hour target (Sept 5,122 hrs).', detail: 'Sept MTD 391 hrs under allowance ≈ $13.1K; on pace for 139% of the hour-reduction target.' },
+    { name: 'Load securement & decking', category: 'Linehaul / load factor', annual: null, ytd: null, status: 'Planned',
+      description: 'ANCRA decks and divider deck-board kits to use the top half of the trailer.', detail: 'LF score 36.4% F27 — every point of load factor reduces linehaul cost per lb.' },
+    { name: 'Freight-handling equipment', category: 'Claims & damage', annual: null, ytd: null, status: 'Planned',
+      description: 'Panel carts / racks for glass shower doors, TVs, panels, car parts.', detail: 'Damaged FB 1.61% (7-day); claims $13.4K in August.' },
+    { name: 'Accessorial capture', category: 'Revenue protection', annual: null, ytd: null, status: 'In progress',
+      description: 'Every accessorial coded before invoicing (residential, tailgate, appointment…).', detail: '≈32,921 accessorial units this month.' },
+    { name: 'Toyota baseload footage capture', category: 'Revenue / load factor', annual: null, ytd: null, status: 'In progress',
+      description: 'Capture Toyota (Bowmanville) linear footage correctly.', detail: 'Moncton lane: 20.5% of bills with no cube vs 3.0% elsewhere.' },
   ],
 
   // --------------------------------------------------------------------------
@@ -651,10 +664,28 @@ export const EDIT_SECTIONS = [
   {
     title: 'F27 Savings Initiatives',
     fields: [
-      f('initiatives.0.annual', 'Dispatcher role ($/yr)'),
-      f('initiatives.1.name', 'Next initiative name', 'text'),
-      f('initiatives.1.annual', 'Next initiative ($/yr)'),
       f('sca.f27SavingsTarget', 'F27 cost take-out target ($)'),
+      f('initiatives.0.annual', 'Dispatcher role ($/yr)'),
+      f('initiatives.0.ytd', 'Dispatcher role realized YTD ($)'),
+      f('initiatives.0.status', 'Dispatcher role status', 'text'),
+      f('initiatives.1.annual', 'Agency mix ($/yr)'),
+      f('initiatives.1.ytd', 'Agency mix realized YTD ($)'),
+      f('initiatives.1.status', 'Agency mix status', 'text'),
+      f('initiatives.2.annual', 'Hours under SCA ($/yr)'),
+      f('initiatives.2.ytd', 'Hours under SCA realized YTD ($)'),
+      f('initiatives.2.status', 'Hours under SCA status', 'text'),
+      f('initiatives.3.annual', 'Load securement ($/yr)'),
+      f('initiatives.3.ytd', 'Load securement realized YTD ($)'),
+      f('initiatives.3.status', 'Load securement status', 'text'),
+      f('initiatives.4.annual', 'Handling equipment ($/yr)'),
+      f('initiatives.4.ytd', 'Handling equipment realized YTD ($)'),
+      f('initiatives.4.status', 'Handling equipment status', 'text'),
+      f('initiatives.5.annual', 'Accessorials ($/yr)'),
+      f('initiatives.5.ytd', 'Accessorials realized YTD ($)'),
+      f('initiatives.5.status', 'Accessorials status', 'text'),
+      f('initiatives.6.annual', 'Toyota footage ($/yr)'),
+      f('initiatives.6.ytd', 'Toyota footage realized YTD ($)'),
+      f('initiatives.6.status', 'Toyota footage status', 'text'),
     ],
   },
   {
