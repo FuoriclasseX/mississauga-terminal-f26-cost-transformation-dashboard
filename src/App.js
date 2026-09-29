@@ -688,7 +688,7 @@ const ServiceTab = ({ d, x }) => {
                 <p className="mt-1 text-4xl font-bold text-gray-900"><V v={m.pct} fmt={(v) => pct(v, 2)} /></p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {deltaChip(m.vsLast, 'vs last period')}
-                  {deltaChip(m.vsFytd, 'vs fiscal YTD')}
+                  {deltaChip(m.vsFytd, 'fiscal YTD chg')}
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
                   Fiscal YTD <V v={m.fytd} fmt={(v) => pct(v, 2)} small /> · {isNum(m.scanned) ? num(m.scanned) : '—'} of {isNum(m.total) ? num(m.total) : '—'}
@@ -699,7 +699,7 @@ const ServiceTab = ({ d, x }) => {
         </div>
         {allNum(sc.measures[0].scanned, sc.measures[0].total) && (
           <p className="mt-4 text-sm text-gray-600">
-            All three measures are ahead of fiscal YTD. ≈{num(sc.measures[0].total - sc.measures[0].scanned)} freight bills this month were not scanned in/out — closing that gap also cuts the “already serviced” missed-PU false positives.
+            September is in line with fiscal YTD ({pct(sc.measures[0].pct)} vs {pct(sc.measures[0].fytd)} of freight bills scanned). ≈{num(sc.measures[0].total - sc.measures[0].scanned)} freight bills were not scanned in/out Sep 1–28 — closing that gap also cuts the “already serviced” missed-PU false positives.
           </p>
         )}
         <Source>Source: Compliance Reporting — Scanning Efficiency In/Out of Terminals, D&R Commerce Mississauga.{isNum(sc.target) ? ` Target ${pct(sc.target, 0)}.` : ''}</Source>
