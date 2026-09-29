@@ -526,12 +526,6 @@ const SafetyTab = ({ d }) => {
 const ServiceTab = ({ d, x }) => {
   const o = d.ots;
   const sc = d.scanning;
-  const scanTiles = [
-    { label: 'Delivery trips', v: sc.deliveryPct, ytd: sc.deliveryFytdPct },
-    { label: 'Line haul — outbound', v: sc.lineHaulOutPct, ytd: sc.lineHaulOutFytdPct },
-    { label: 'Line haul — inbound', v: sc.lineHaulInPct },
-    { label: 'Pickup trips', v: sc.pickupPct },
-  ];
   return (
     <>
       <PageHeader
@@ -678,31 +672,37 @@ const ServiceTab = ({ d, x }) => {
 
       <MissedPuCard m={d.missedPu} />
 
-      <Card title="Scanning compliance — freight bills scanned" subtitle={`In/out of facility · ${sc.dateRange}`} icon={Activity}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {scanTiles.map((t) => {
-            const good = isNum(t.v) ? t.v >= sc.target : null;
+      <Card title="Scanning compliance — in/out of facility" subtitle={`Compliance Reporting · ${sc.dateRange} · all trip types`} icon={Activity}>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {sc.measures.map((m) => {
+            const good = allNum(m.pct, sc.target) ? m.pct >= sc.target : null;
+            const deltaChip = (v, label) =>
+              isNum(v) && (
+                <Chip tone={v >= 0 ? 'green' : 'red'}>
+                  {v >= 0 ? '↑' : '↓'} {Math.abs(v).toFixed(2)} {label}
+                </Chip>
+              );
             return (
-              <div key={t.label} className={`rounded-xl p-5 ${good === null ? 'bg-gray-50' : good ? 'bg-green-50' : 'bg-red-50'}`}>
-                <p className="text-sm font-medium text-gray-600">{t.label}</p>
-                <p className={`mt-1 text-4xl font-bold ${good === null ? 'text-gray-900' : good ? 'text-green-700' : 'text-red-700'}`}>
-                  <V v={t.v} fmt={(v) => pct(v, 2)} />
+              <div key={m.label} className={`rounded-xl p-5 ${good === null ? 'bg-gray-50' : good ? 'bg-green-50' : 'bg-red-50'}`}>
+                <p className="text-sm font-medium text-gray-600">{m.label}</p>
+                <p className="mt-1 text-4xl font-bold text-gray-900"><V v={m.pct} fmt={(v) => pct(v, 2)} /></p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {deltaChip(m.vsLast, 'vs last period')}
+                  {deltaChip(m.vsFytd, 'vs fiscal YTD')}
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Fiscal YTD <V v={m.fytd} fmt={(v) => pct(v, 2)} small /> · {isNum(m.scanned) ? num(m.scanned) : '—'} of {isNum(m.total) ? num(m.total) : '—'}
                 </p>
-                {'ytd' in t && (
-                  <p className="mt-2 text-xs text-gray-500">
-                    Fiscal YTD <V v={t.ytd} fmt={(v) => pct(v, 2)} small />
-                  </p>
-                )}
-                {isNum(t.v) && isNum(sc.target) && (
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-                    <div className={`h-full ${good ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, t.v)}%` }} />
-                  </div>
-                )}
               </div>
             );
           })}
         </div>
-        <Source>Target {isNum(sc.target) ? pct(sc.target, 0) : 'TBC'} of freight bills scanned. Source: Compliance Reporting — Scanning Efficiency In/Out of Terminals.</Source>
+        {allNum(sc.measures[0].scanned, sc.measures[0].total) && (
+          <p className="mt-4 text-sm text-gray-600">
+            All three measures are ahead of fiscal YTD. ≈{num(sc.measures[0].total - sc.measures[0].scanned)} freight bills this month were not scanned in/out — closing that gap also cuts the “already serviced” missed-PU false positives.
+          </p>
+        )}
+        <Source>Source: Compliance Reporting — Scanning Efficiency In/Out of Terminals, D&R Commerce Mississauga.{isNum(sc.target) ? ` Target ${pct(sc.target, 0)}.` : ''}</Source>
       </Card>
     </>
   );

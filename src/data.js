@@ -167,15 +167,16 @@ export const DEFAULT_DATA = {
   // --------------------------------------------------------------------------
   // SERVICE — SCANNING COMPLIANCE (Freight Bills Scanned %)
   // --------------------------------------------------------------------------
+  // Compliance Reporting — Scanning Efficiency In/Out of Terminals,
+  // D&R Commerce Mississauga, Sep 1–28, 2026 (28 days), all trip types
   scanning: {
-    dateRange: 'Sep 6 – Sep 11, 2026',
-    deliveryPct: null,          // Delivery trips
-    deliveryFytdPct: null,
-    lineHaulOutPct: null,       // Line Haul (Outbound)
-    lineHaulOutFytdPct: null,
-    lineHaulInPct: null,        // Line Haul (Inbound)
-    pickupPct: null,            // Pickup trips
-    target: 98,
+    dateRange: 'Sep 1 – Sep 28, 2026',
+    measures: [
+      { label: 'Freight bills scanned', pct: 91.37, fytd: 91.55, vsLast: -0.22, vsFytd: 0.47, scanned: 48220, total: 52770 },
+      { label: 'Freight bills completely scanned', pct: 90.5, fytd: 90.54, vsLast: -0.2, vsFytd: 0.6, scanned: 47760, total: 52770 },
+      { label: 'Items scanned', pct: 90.66, fytd: 90.61, vsLast: -0.13, vsFytd: 1.54, scanned: 73850, total: 81460 },
+    ],
+    target: null,               // no target provided
   },
 
   // --------------------------------------------------------------------------
@@ -458,12 +459,10 @@ export const EDIT_SECTIONS = [
     title: 'Service — Scanning',
     fields: [
       f('scanning.dateRange', 'Date range', 'text'),
-      f('scanning.deliveryPct', 'Delivery trips %'),
-      f('scanning.deliveryFytdPct', 'Delivery fiscal YTD %'),
-      f('scanning.lineHaulOutPct', 'Line haul outbound %'),
-      f('scanning.lineHaulOutFytdPct', 'Line haul outbound fiscal YTD %'),
-      f('scanning.lineHaulInPct', 'Line haul inbound %'),
-      f('scanning.pickupPct', 'Pickup trips %'),
+      f('scanning.target', 'Scanning target % (optional)'),
+      f('scanning.measures.0.pct', 'FBs scanned %'),
+      f('scanning.measures.1.pct', 'FBs completely scanned %'),
+      f('scanning.measures.2.pct', 'Items scanned %'),
     ],
   },
   {
