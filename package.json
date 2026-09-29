@@ -13,7 +13,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "prebuild": "cp presentation/Mississauga_F27_Leadership_Review_Sep29.pptx public/Mississauga_F27_Leadership_Review.pptx"
   },
   "devDependencies": {
     "react-scripts": "5.0.1"
